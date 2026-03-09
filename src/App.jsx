@@ -186,8 +186,11 @@ export default function App() {
             Powered by Contextual Compute
           </p>
 
-          <a href={LITEPAPER_URL} className="inline-flex items-center gap-3 mt-10 group">
-            <span className="font-mono text-[10px] tracking-[0.2em] uppercase pb-[3px] border-b border-[#1c1c1c]/20 group-hover:border-[#1c1c1c]/60 transition-colors duration-300">
+          <a
+            href={LITEPAPER_URL}
+            className="inline-flex items-center gap-3 mt-10 group border border-[#1c1c1c]/18 hover:border-[#1c1c1c]/40 px-5 py-2.5 transition-colors duration-300"
+          >
+            <span className="font-mono text-[10px] font-semibold tracking-[0.2em] uppercase">
               Read Litepaper
             </span>
             <span className="text-sm text-[#9a9590] group-hover:text-[#1c1c1c] group-hover:translate-x-0.5 transition-all duration-300">
