@@ -134,13 +134,13 @@ export default function App() {
             href="https://docs.moi.technology"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#9a9590] hover:text-[#1c1c1c] transition-colors duration-300"
+            className="font-mono text-[10px] font-semibold tracking-[0.2em] uppercase text-[#9a9590] hover:text-[#1c1c1c] transition-colors duration-300"
           >
             Docs
           </a>
           <a
             href={LITEPAPER_URL}
-            className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#9a9590] hover:text-[#1c1c1c] transition-colors duration-300"
+            className="font-mono text-[10px] font-semibold tracking-[0.2em] uppercase text-[#9a9590] hover:text-[#1c1c1c] transition-colors duration-300"
           >
             Litepaper
           </a>
