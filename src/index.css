@@ -2,7 +2,7 @@
 
 @theme {
   --font-serif: "Instrument Serif", Georgia, "Times New Roman", serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+  --font-mono: "DM Mono", ui-monospace, "SFMono-Regular", monospace;
 }
 
 body {
