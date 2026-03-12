@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import MOIChatbot from "./components/MOIChatbot";
 
 const LITEPAPER_URL = "/MOILitePaper.pdf";
 const NAV_H = 72;
@@ -525,6 +526,8 @@ export default function App() {
             </span>
           </a>
         </div>
+
+        <MOIChatbot />
       </div>
     </>
   );

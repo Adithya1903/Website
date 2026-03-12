@@ -1,0 +1,19 @@
+{
+  "name": "moi-chatbot-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "ingest": "node ../scripts/ingest.js",
+    "ingest:clear": "node ../scripts/ingest.js --clear"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@supabase/supabase-js": "^2.49.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.0",
+    "openai": "^4.77.0",
+    "pdf-parse": "^1.1.1"
+  }
+}
