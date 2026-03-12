@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
@@ -13,25 +14,33 @@ const CHUNK_OVERLAP = 200;
 const BATCH_SIZE = 20;
 const BATCH_DELAY = 200;
 
-async function extractText(filePath) {
-  const ext = path.extname(filePath).toLowerCase();
-  if (ext === ".md" || ext === ".txt") {
-    return fs.readFileSync(filePath, "utf-8");
+async function extractTextFromPDF(filePath) {
+  const doc = await getDocument(filePath).promise;
+  let text = '';
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(item => item.str).join(' ') + '\n';
   }
-  if (ext === ".pdf") {
-    const pdfParse = (await import("pdf-parse")).default;
-    const buffer = fs.readFileSync(filePath);
-    const data = await pdfParse(buffer);
-    return data.text;
-  }
-  return null;
+  return text;
 }
 
 function chunkText(text, source) {
   const chunks = [];
 
   const sections = text.split(/(?=^#{1,3}\s)/m);
-
+  // If no markdown headers found (e.g. PDF), treat whole text as one section
+  if (sections.length <= 1) {
+    const words = text.split(/\s+/);
+    const rawChunks = [];
+    for (let i = 0; i < words.length; i += Math.floor(CHUNK_SIZE / 5)) {
+      const chunk = words.slice(Math.max(0, i - Math.floor(CHUNK_OVERLAP / 5)), i + Math.floor(CHUNK_SIZE / 5)).join(' ');
+      if (chunk.length >= 50) {
+        rawChunks.push({ content: chunk.trim(), metadata: { source } });
+      }
+    }
+    return rawChunks;
+  }
   for (const section of sections) {
     const lines = section.trim().split("\n");
     const headerMatch = lines[0]?.match(/^#{1,3}\s+(.+)/);
@@ -100,7 +109,14 @@ async function main() {
   const allChunks = [];
   for (const file of files) {
     console.log(`\nProcessing: ${file}`);
-    const text = await extractText(path.join(DOCS_DIR, file));
+    const filePath = path.join(DOCS_DIR, file);
+    const ext = path.extname(file).toLowerCase();
+    let text;
+    if (ext === '.pdf') {
+      text = await extractTextFromPDF(filePath);
+    } else {
+      text = fs.readFileSync(filePath, 'utf-8');
+    }
     if (!text) {
       console.log(`  Skipped (unsupported format)`);
       continue;
@@ -122,7 +138,7 @@ async function main() {
     const rows = batch.map((chunk, j) => ({
       content: chunk.content,
       metadata: chunk.metadata,
-      embedding: embeddings[j],
+      embedding: JSON.stringify(embeddings[j]),
     }));
 
     const { error } = await supabase.from("documents").insert(rows);

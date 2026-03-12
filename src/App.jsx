@@ -4,6 +4,8 @@ import MOIChatbot from "./components/MOIChatbot";
 const LITEPAPER_URL = "/MOILitePaper.pdf";
 const NAV_H = 72;
 const SPACING = 85;
+const AMBIENT_HIGHLIGHT_MS = 4000;
+const AMBIENT_GLOW_MS = 3200;
 const PURPLE = { r: 123, g: 94, b: 167 };
 const DEFAULT_COLOR = { r: 26, g: 26, b: 26 };
 
@@ -12,109 +14,25 @@ const CHAR_MS = 95;
 const LINE_PAUSE_MS = 320;
 const END_PAUSE_MS = 700;
 
-const TRAITS = [
-  "only flies business class",
-  "allergic to chicken",
-  "speaks 4 languages",
-  "scared of butterflies",
-  "eats pizza with chopsticks",
-  "has 3 cats named after planets",
-  "collects vintage vinyl",
-  "can solve a Rubik's cube in 40s",
-  "lactose intolerant but loves cheese",
-  "still uses a flip phone",
-  "sleeps with socks on",
-  "memorized 200 digits of pi",
-  "grows bonsai trees",
-  "won a yodeling contest",
-  "thinks cereal is soup",
-  "has a photographic memory",
-  "reads books backwards",
-  "types 140 wpm",
-  "never eats breakfast",
-  "can name every country",
-  "has visited 47 countries",
-  "plays chess blindfolded",
-  "owns 200+ houseplants",
-  "afraid of escalators",
-  "makes pottery on weekends",
-  "runs ultramarathons",
-  "has synesthesia",
-  "writes with both hands",
-  "can hold breath for 3 minutes",
-  "always carries a notebook",
-  "knows sign language",
-  "has a twin they've never met",
-  "once lived on a boat for a year",
-  "collects first edition books",
-  "eats lemons like oranges",
-  "has perfect pitch",
-  "builds mechanical keyboards",
-  "sleeps exactly 6 hours",
-  "can juggle 5 balls",
-  "drives a 1970s camper van",
-  "brews their own kombucha",
-  "has a fear of cotton balls",
-  "reads tarot cards",
-  "won a pie eating contest",
-  "plays the theremin",
-  "only wears black",
-  "has a pet tortoise named Archimedes",
-  "can recite the periodic table",
-  "hiked the entire PCT",
-  "makes sourdough every Sunday",
-  "has a pilot's license",
-  "never learned to ride a bike",
-  "does cold plunges daily",
-  "speaks fluent Esperanto",
-  "once met the Pope",
-  "collects antique maps",
-  "eats sushi for breakfast",
-  "can whistle in two tones",
-  "has 14 siblings",
-  "writes poetry in Latin",
-  "trained as a ballet dancer",
-  "knows morse code",
-  "keeps bees on their roof",
-  "can identify 300 bird species",
-  "was a child actor",
-  "ferments everything",
-  "plays competitive Tetris",
-  "has a black belt in aikido",
-  "builds ships in bottles",
-  "counts stairs everywhere",
-  "can taste water brands apart",
-  "writes letters by hand only",
-  "practices lucid dreaming",
-  "plays the accordion",
-  "lived off-grid for 2 years",
-  "has a fear of velvet",
-  "solves crosswords in pen",
-  "can read upside down",
-  "has climbed Kilimanjaro",
-  "makes candles from scratch",
-  "owns a vintage typewriter",
-  "refuses to use umbrellas",
-  "knows every Beatles lyric",
-  "does mental math faster than a calculator",
-  "always sits in aisle seats",
-  "collects snow globes",
-  "can mimic 20 accents",
-  "once broke a world record",
-  "draws maps from memory",
-  "allergic to Wi-Fi (claims)",
-  "never takes photos",
-  "wakes up at 4:30am daily",
-  "has a library of 3000 books",
-  "drinks coffee with salt",
-  "can name every bone in the body",
-  "wears mismatched socks on purpose",
-  "has a lucky marble",
-  "paints only in shades of blue",
-  "speaks to plants every morning",
-  "once swam with whale sharks",
-  "prefers paper maps to GPS",
-];
+const ACTIVITY_LABELS = {
+  programming: "Programming",
+  trading: "Trading",
+  cooking: "Cooking",
+  tennis: "Tennis",
+  football: "Football",
+  piano: "Piano",
+  singing: "Singing",
+  boxing: "Boxing",
+  painting: "Painting",
+  photography: "Photography",
+  running: "Running",
+  cycling: "Cycling",
+  reading: "Reading",
+  gaming: "Gaming",
+  dancing: "Dancing",
+};
+
+const ACTIVITY_TYPES = Object.keys(ACTIVITY_LABELS);
 
 function randomHex(n) {
   return [...Array(n)].map(() => Math.floor(Math.random() * 16).toString(16)).join("");
@@ -129,25 +47,47 @@ function shuffle(arr) {
   return a;
 }
 
+function rand(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function buildParticipantPool(total) {
+  const participants = [];
+
+  while (participants.length < total) {
+    for (const activity of shuffle(ACTIVITY_TYPES)) {
+      participants.push({ activity, context: ACTIVITY_LABELS[activity] });
+      if (participants.length >= total) return participants;
+    }
+  }
+
+  return participants;
+}
+
 function buildGrid(w, h) {
   const cols = Math.ceil(w / SPACING) + 1;
   const rows = Math.ceil(h / SPACING) + 1;
   const offsetX = (w - (cols - 1) * SPACING) / 2;
   const offsetY = (h - (rows - 1) * SPACING) / 2;
   const total = cols * rows;
-
-  let traits = shuffle(TRAITS);
-  while (traits.length < total) traits = traits.concat(shuffle(TRAITS));
+  const participants = buildParticipantPool(total);
 
   const nodes = [];
-  let ti = 0;
+  let participantIndex = 0;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
+      const participant = participants[participantIndex++];
+      const staggerOffset = (r % 2 === 0 ? -1 : 1) * SPACING * 0.22;
+      const jitterX = rand(-SPACING * 0.16, SPACING * 0.16);
+      const jitterY = rand(-SPACING * 0.2, SPACING * 0.2);
+      const x = Math.max(30, Math.min(w - 30, offsetX + c * SPACING + staggerOffset + jitterX));
+      const y = Math.max(28, Math.min(h - 24, offsetY + r * SPACING + jitterY));
       nodes.push({
-        x: offsetX + c * SPACING,
-        y: offsetY + r * SPACING,
+        x,
+        y,
         id: `MOI-${randomHex(4)}`,
-        context: traits[ti++],
+        activity: participant.activity,
+        context: participant.context,
         labelOpacity: 0,
       });
     }
@@ -155,7 +95,26 @@ function buildGrid(w, h) {
   return nodes;
 }
 
-function drawFigure(ctx, x, y, scale, color, alpha) {
+function drawLine(ctx, x1, y1, x2, y2) {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+}
+
+function drawCircle(ctx, x, y, r) {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawEllipse(ctx, x, y, rx, ry, rotation = 0) {
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, rotation, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawFigure(ctx, x, y, scale, color, alpha, activity) {
   const s = scale;
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -163,37 +122,207 @@ function drawFigure(ctx, x, y, scale, color, alpha) {
   ctx.lineWidth = 1.2 * s;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  const headR = 3.2 * s;
-  const bodyTop = y - 8 * s;
-  const bodyBot = y + 6 * s;
-  ctx.beginPath();
-  ctx.arc(x, bodyTop - headR, headR, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x, bodyTop);
-  ctx.lineTo(x, bodyBot);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x - 6 * s, y + 1 * s);
-  ctx.lineTo(x, y - 3 * s);
-  ctx.lineTo(x + 6 * s, y + 1 * s);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x - 5 * s, y + 14 * s);
-  ctx.lineTo(x, bodyBot);
-  ctx.lineTo(x + 5 * s, y + 14 * s);
-  ctx.stroke();
+  const headR = 3.1 * s;
+  const headY = y - 11 * s;
+  const shoulderY = y - 6 * s;
+  const hipY = y + 5 * s;
+  const footY = y + 14 * s;
+
+  drawCircle(ctx, x, headY, headR);
+
+  switch (activity) {
+    case "programming":
+      drawLine(ctx, x, shoulderY, x + 1 * s, hipY);
+      drawLine(ctx, x, shoulderY + 2 * s, x + 6 * s, y - 1 * s);
+      drawLine(ctx, x, shoulderY + 1 * s, x + 7 * s, y + 1 * s);
+      drawLine(ctx, x + 1 * s, hipY, x - 4 * s, y + 9 * s);
+      drawLine(ctx, x - 4 * s, y + 9 * s, x - 4 * s, footY);
+      drawLine(ctx, x + 1 * s, hipY, x + 2 * s, y + 9 * s);
+      drawLine(ctx, x + 2 * s, y + 9 * s, x + 7 * s, y + 9 * s);
+      drawLine(ctx, x + 5 * s, y - 2 * s, x + 5 * s, y + 12 * s);
+      drawLine(ctx, x + 5 * s, y - 2 * s, x + 14 * s, y - 2 * s);
+      drawLine(ctx, x + 7 * s, y - 5 * s, x + 12 * s, y - 2 * s);
+      drawLine(ctx, x + 12 * s, y - 2 * s, x + 7 * s, y - 2 * s);
+      break;
+
+    case "trading":
+      drawLine(ctx, x, shoulderY, x, hipY);
+      drawLine(ctx, x, y - 3 * s, x + 6 * s, y - 1 * s);
+      drawLine(ctx, x, y - 1 * s, x - 4 * s, y + 2 * s);
+      drawLine(ctx, x, hipY, x - 4 * s, footY);
+      drawLine(ctx, x, hipY, x + 4 * s, footY);
+      ctx.strokeRect(x + 7 * s, y - 8 * s, 8 * s, 10 * s);
+      drawLine(ctx, x + 8.5 * s, y - 2 * s, x + 10.5 * s, y - 4.5 * s);
+      drawLine(ctx, x + 10.5 * s, y - 4.5 * s, x + 12.5 * s, y - 1.5 * s);
+      drawLine(ctx, x + 12.5 * s, y - 1.5 * s, x + 14 * s, y - 5 * s);
+      break;
+
+    case "cooking":
+      drawLine(ctx, x, shoulderY, x, hipY);
+      drawLine(ctx, x, y - 2 * s, x + 5 * s, y + 1 * s);
+      drawLine(ctx, x, y - 1 * s, x + 10 * s, y - 3 * s);
+      drawLine(ctx, x, hipY, x - 4 * s, footY);
+      drawLine(ctx, x, hipY, x + 4 * s, footY);
+      drawLine(ctx, x + 5 * s, y + 5 * s, x + 16 * s, y + 5 * s);
+      ctx.strokeRect(x + 8 * s, y + 1 * s, 6 * s, 4 * s);
+      drawLine(ctx, x + 14 * s, y + 2 * s, x + 17 * s, y + 2 * s);
+      drawLine(ctx, x + 10 * s, y - 3 * s, x + 12.5 * s, y - 7 * s);
+      break;
+
+    case "tennis":
+      drawLine(ctx, x, shoulderY, x, hipY);
+      drawLine(ctx, x, y - 2 * s, x - 5 * s, y + 1 * s);
+      drawLine(ctx, x, y - 2 * s, x + 6 * s, y - 4 * s);
+      drawLine(ctx, x, hipY, x - 6 * s, footY);
+      drawLine(ctx, x, hipY, x + 3 * s, y + 10 * s);
+      drawLine(ctx, x + 3 * s, y + 10 * s, x + 8 * s, footY);
+      drawLine(ctx, x + 6 * s, y - 4 * s, x + 11 * s, y - 7 * s);
+      drawEllipse(ctx, x + 14 * s, y - 9 * s, 3 * s, 4.5 * s, 0.4);
+      drawLine(ctx, x + 11 * s, y - 7 * s, x + 12.5 * s, y - 5 * s);
+      break;
+
+    case "football":
+      drawLine(ctx, x, shoulderY, x, hipY);
+      drawLine(ctx, x, y - 2 * s, x - 6 * s, y);
+      drawLine(ctx, x, y - 2 * s, x + 5 * s, y + 1 * s);
+      drawLine(ctx, x, hipY, x - 3 * s, footY);
+      drawLine(ctx, x, hipY, x + 7 * s, y + 10 * s);
+      drawLine(ctx, x + 7 * s, y + 10 * s, x + 11 * s, y + 12 * s);
+      drawCircle(ctx, x + 13 * s, y + 12 * s, 2.2 * s);
+      break;
+
+    case "piano":
+      drawLine(ctx, x, shoulderY, x + 1 * s, hipY);
+      drawLine(ctx, x, y - 1 * s, x + 7 * s, y + 1 * s);
+      drawLine(ctx, x, y, x + 8 * s, y + 2 * s);
+      drawLine(ctx, x + 1 * s, hipY, x - 4 * s, y + 9 * s);
+      drawLine(ctx, x - 4 * s, y + 9 * s, x - 4 * s, footY);
+      drawLine(ctx, x + 1 * s, hipY, x + 1 * s, footY - 1 * s);
+      ctx.strokeRect(x + 6 * s, y - 1 * s, 11 * s, 4 * s);
+      drawLine(ctx, x + 7 * s, y + 3 * s, x + 6 * s, y + 9 * s);
+      drawLine(ctx, x + 16 * s, y + 3 * s, x + 17 * s, y + 9 * s);
+      break;
+
+    case "singing":
+      drawLine(ctx, x, shoulderY, x, hipY);
+      drawLine(ctx, x, y - 3 * s, x - 5 * s, y - 7 * s);
+      drawLine(ctx, x, y - 2 * s, x + 5 * s, y);
+      drawLine(ctx, x, hipY, x - 4 * s, footY);
+      drawLine(ctx, x, hipY, x + 4 * s, footY);
+      drawLine(ctx, x + 8 * s, y - 7 * s, x + 8 * s, y + 13 * s);
+      drawCircle(ctx, x + 8 * s, y - 8 * s, 1.3 * s);
+      break;
+
+    case "boxing":
+      drawLine(ctx, x, shoulderY, x, hipY);
+      drawLine(ctx, x, y - 2 * s, x - 4 * s, y - 5 * s);
+      drawLine(ctx, x - 4 * s, y - 5 * s, x - 6 * s, y - 2 * s);
+      drawLine(ctx, x, y - 2 * s, x + 4 * s, y - 5 * s);
+      drawLine(ctx, x + 4 * s, y - 5 * s, x + 6 * s, y - 2 * s);
+      drawCircle(ctx, x - 6 * s, y - 2 * s, 1.5 * s);
+      drawCircle(ctx, x + 6 * s, y - 2 * s, 1.5 * s);
+      drawLine(ctx, x, hipY, x - 4 * s, footY);
+      drawLine(ctx, x, hipY, x + 4 * s, footY);
+      break;
+
+    case "painting":
+      drawLine(ctx, x, shoulderY, x, hipY);
+      drawLine(ctx, x, y - 2 * s, x + 7 * s, y - 4 * s);
+      drawLine(ctx, x, y - 1 * s, x - 4 * s, y + 2 * s);
+      drawLine(ctx, x, hipY, x - 4 * s, footY);
+      drawLine(ctx, x, hipY, x + 4 * s, footY);
+      ctx.strokeRect(x + 8 * s, y - 8 * s, 8 * s, 10 * s);
+      drawLine(ctx, x + 8 * s, y + 2 * s, x + 6 * s, y + 10 * s);
+      drawLine(ctx, x + 16 * s, y + 2 * s, x + 18 * s, y + 10 * s);
+      drawLine(ctx, x + 7 * s, y - 4 * s, x + 9 * s, y - 6 * s);
+      break;
+
+    case "photography":
+      drawLine(ctx, x, shoulderY, x, hipY);
+      drawLine(ctx, x, y - 2 * s, x - 3 * s, y - 5 * s);
+      drawLine(ctx, x, y - 2 * s, x + 3 * s, y - 5 * s);
+      drawLine(ctx, x, hipY, x - 4 * s, footY);
+      drawLine(ctx, x, hipY, x + 4 * s, footY);
+      ctx.strokeRect(x - 2.5 * s, y - 6.5 * s, 5 * s, 3.5 * s);
+      drawCircle(ctx, x, y - 4.75 * s, 0.9 * s);
+      break;
+
+    case "running":
+      drawLine(ctx, x - 1 * s, shoulderY, x + 2 * s, hipY);
+      drawLine(ctx, x - 1 * s, y - 2 * s, x - 6 * s, y + 1 * s);
+      drawLine(ctx, x, y - 2 * s, x + 6 * s, y - 5 * s);
+      drawLine(ctx, x + 2 * s, hipY, x - 5 * s, y + 10 * s);
+      drawLine(ctx, x - 5 * s, y + 10 * s, x - 8 * s, footY);
+      drawLine(ctx, x + 2 * s, hipY, x + 7 * s, y + 7 * s);
+      drawLine(ctx, x + 7 * s, y + 7 * s, x + 11 * s, y + 10 * s);
+      break;
+
+    case "cycling":
+      drawCircle(ctx, x - 8 * s, y + 12 * s, 4.5 * s);
+      drawCircle(ctx, x + 8 * s, y + 12 * s, 4.5 * s);
+      drawLine(ctx, x - 8 * s, y + 12 * s, x - 1 * s, y + 6 * s);
+      drawLine(ctx, x - 1 * s, y + 6 * s, x + 3 * s, y + 12 * s);
+      drawLine(ctx, x + 3 * s, y + 12 * s, x - 8 * s, y + 12 * s);
+      drawLine(ctx, x - 1 * s, y + 6 * s, x + 7 * s, y + 5 * s);
+      drawLine(ctx, x + 7 * s, y + 5 * s, x + 8 * s, y + 12 * s);
+      drawLine(ctx, x - 1 * s, y + 6 * s, x - 1 * s, y + 2 * s);
+      drawLine(ctx, x + 1 * s, y - 2 * s, x - 1 * s, y + 2 * s);
+      drawLine(ctx, x + 1 * s, y - 2 * s, x + 5 * s, y + 2 * s);
+      drawLine(ctx, x + 5 * s, y + 2 * s, x + 7 * s, y + 5 * s);
+      break;
+
+    case "reading":
+      drawLine(ctx, x, shoulderY, x, hipY);
+      drawLine(ctx, x, y - 2 * s, x - 4 * s, y + 1 * s);
+      drawLine(ctx, x, y - 2 * s, x + 4 * s, y + 1 * s);
+      drawLine(ctx, x, hipY, x - 4 * s, footY);
+      drawLine(ctx, x, hipY, x + 4 * s, footY);
+      drawLine(ctx, x - 4 * s, y + 1 * s, x, y + 3 * s);
+      drawLine(ctx, x + 4 * s, y + 1 * s, x, y + 3 * s);
+      drawLine(ctx, x, y + 3 * s, x, y - 1 * s);
+      break;
+
+    case "gaming":
+      drawLine(ctx, x, shoulderY, x + 1 * s, hipY);
+      drawLine(ctx, x, y - 1 * s, x + 5 * s, y + 1 * s);
+      drawLine(ctx, x, y, x + 6 * s, y + 2 * s);
+      drawLine(ctx, x + 1 * s, hipY, x - 4 * s, y + 9 * s);
+      drawLine(ctx, x - 4 * s, y + 9 * s, x - 4 * s, footY);
+      drawLine(ctx, x + 1 * s, hipY, x + 2 * s, y + 9 * s);
+      drawLine(ctx, x + 2 * s, y + 9 * s, x + 7 * s, y + 10 * s);
+      drawLine(ctx, x + 5 * s, y + 1 * s, x + 6.5 * s, y + 2.5 * s);
+      drawLine(ctx, x + 6.5 * s, y + 2.5 * s, x + 8 * s, y + 1 * s);
+      drawLine(ctx, x + 8 * s, y + 1 * s, x + 9.5 * s, y + 2.5 * s);
+      break;
+
+    case "dancing":
+      drawLine(ctx, x, shoulderY, x, hipY);
+      drawLine(ctx, x, y - 3 * s, x - 6 * s, y - 7 * s);
+      drawLine(ctx, x, y - 2 * s, x + 7 * s, y - 5 * s);
+      drawLine(ctx, x, hipY, x - 5 * s, footY);
+      drawLine(ctx, x, hipY, x + 4 * s, y + 7 * s);
+      drawLine(ctx, x + 4 * s, y + 7 * s, x + 8 * s, y + 4 * s);
+      break;
+
+    default:
+      drawLine(ctx, x, shoulderY, x, hipY);
+      drawLine(ctx, x - 6 * s, y + 1 * s, x, y - 3 * s);
+      drawLine(ctx, x, y - 3 * s, x + 6 * s, y + 1 * s);
+      drawLine(ctx, x - 5 * s, y + 14 * s, x, hipY);
+      drawLine(ctx, x, hipY, x + 5 * s, y + 14 * s);
+  }
+
   ctx.restore();
 }
 
 function ParticipantCanvas() {
   const canvasRef = useRef(null);
   const nodesRef = useRef([]);
-  const mouseRef = useRef({ x: -9999, y: -9999 });
   const activeRef = useRef(-1);
+  const activeUntilRef = useRef(0);
   const ripplesRef = useRef([]);
-  const lastRippleTimeRef = useRef({});
   const rafRef = useRef(null);
+  const ambientTimerRef = useRef(null);
 
   const rebuild = useCallback(() => {
     const canvas = canvasRef.current;
@@ -215,11 +344,33 @@ function ParticipantCanvas() {
   }, [rebuild]);
 
   useEffect(() => {
-    const onMove = (e) => {
-      mouseRef.current = { x: e.clientX, y: e.clientY - NAV_H };
+    const triggerRandomHighlight = () => {
+      const nodes = nodesRef.current;
+      if (nodes.length === 0) return;
+
+      const nextIndex = Math.floor(Math.random() * nodes.length);
+      const nextNode = nodes[nextIndex];
+
+      activeRef.current = nextIndex;
+      activeUntilRef.current = Date.now() + AMBIENT_GLOW_MS;
+      ripplesRef.current.push({
+        x: nextNode.x,
+        y: nextNode.y,
+        radius: 0,
+        opacity: 1,
+      });
     };
-    window.addEventListener("mousemove", onMove);
-    return () => window.removeEventListener("mousemove", onMove);
+
+    const initialTimeout = window.setTimeout(triggerRandomHighlight, 1200);
+    ambientTimerRef.current = window.setInterval(
+      triggerRandomHighlight,
+      AMBIENT_HIGHLIGHT_MS
+    );
+
+    return () => {
+      window.clearTimeout(initialTimeout);
+      if (ambientTimerRef.current) window.clearInterval(ambientTimerRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -234,38 +385,10 @@ function ParticipantCanvas() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, W, H);
 
-      const mx = mouseRef.current.x;
-      const my = mouseRef.current.y;
       const nodes = nodesRef.current;
       const ripples = ripplesRef.current;
-
-      let closestIdx = -1;
-      let closestDist = Infinity;
-      for (let i = 0; i < nodes.length; i++) {
-        const dx = nodes[i].x - mx;
-        const dy = nodes[i].y - my;
-        const d = Math.sqrt(dx * dx + dy * dy);
-        if (d < 38 && d < closestDist) {
-          closestDist = d;
-          closestIdx = i;
-        }
-      }
-
-      if (closestIdx !== -1 && closestIdx !== activeRef.current) {
-        activeRef.current = closestIdx;
-        const now = Date.now();
-        const lastTime = lastRippleTimeRef.current[closestIdx] || 0;
-        if (now - lastTime > 600) {
-          lastRippleTimeRef.current[closestIdx] = now;
-          ripples.push({
-            x: nodes[closestIdx].x,
-            y: nodes[closestIdx].y,
-            radius: 0,
-            opacity: 1,
-          });
-        }
-      }
-      if (closestIdx === -1) activeRef.current = -1;
+      const isHighlightActive = Date.now() < activeUntilRef.current;
+      if (!isHighlightActive) activeRef.current = -1;
 
       for (let i = ripples.length - 1; i >= 0; i--) {
         ripples[i].radius += 4;
@@ -285,19 +408,10 @@ function ParticipantCanvas() {
 
       for (let i = 0; i < nodes.length; i++) {
         const n = nodes[i];
-        const dx = n.x - mx;
-        const dy = n.y - my;
-        const dist = Math.sqrt(dx * dx + dy * dy);
 
         let alpha = 0.10;
         let scale = 0.85;
         let color = DEFAULT_COLOR;
-
-        if (dist < 120) {
-          const t = 1 - dist / 120;
-          alpha = 0.10 + t * 0.18;
-          scale = 0.85 + t * 0.08;
-        }
 
         let rippleIntensity = 0;
         for (const rip of ripples) {
@@ -321,14 +435,14 @@ function ParticipantCanvas() {
           scale = Math.max(scale, 0.85 + rippleIntensity * 0.1);
         }
 
-        const isActive = i === activeRef.current;
+        const isActive = isHighlightActive && i === activeRef.current;
         if (isActive) {
           color = PURPLE;
           alpha = 0.7;
           scale = 1.0;
         }
 
-        drawFigure(ctx, n.x, n.y, scale, color, alpha);
+        drawFigure(ctx, n.x, n.y, scale, color, alpha, n.activity);
 
         if (isActive) {
           n.labelOpacity = Math.min(1, n.labelOpacity + 0.08);

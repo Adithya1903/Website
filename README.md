@@ -1,16 +1,144 @@
-# React + Vite
+# MOI Website
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Landing page and chatbot experience for MOI.
 
-Currently, two official plugins are available:
+## Repo Structure
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- `src/`: React frontend built with Vite.
+- `server/`: Express chatbot API.
+- `scripts/ingest.js`: document ingestion script for the retrieval pipeline.
+- `docs/`: source documents used for ingestion into Supabase.
+- `public/`: static frontend assets served to users.
+- `supabase-setup.sql`: database setup for the retrieval store.
 
-## React Compiler
+## How The App Is Split
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+This repo is intentionally split into two runtime pieces:
 
-## Expanding the ESLint configuration
+1. The frontend is a static Vite app.
+2. The chatbot runs on a separate Node/Express backend.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+The frontend sends chat requests to `VITE_CHATBOT_API`, and the backend handles:
+
+- embeddings via OpenAI
+- retrieval via Supabase
+- response generation and streaming via Anthropic
+
+## Environment Variables
+
+Copy `.env.example` to `.env` for local development and fill in your real values.
+
+Required variables:
+
+- `ANTHROPIC_API_KEY`
+- `OPENAI_API_KEY`
+- `SUPABASE_URL`
+- `SUPABASE_KEY`
+- `PORT`
+- `VITE_CHATBOT_API`
+
+For local development, `VITE_CHATBOT_API` should usually be `http://localhost:3001`.
+
+## Local Development
+
+Install dependencies:
+
+```bash
+npm install
+npm install --prefix server
+```
+
+Run the frontend:
+
+```bash
+npm run dev
+```
+
+Run the backend in a second terminal:
+
+```bash
+npm run dev:server
+```
+
+The local app will then run as:
+
+- frontend: `http://localhost:5173`
+- backend: `http://localhost:3001`
+
+## Ingestion Workflow
+
+The chatbot relies on documents stored in `docs/`.
+
+To ingest documents into Supabase:
+
+```bash
+npm run ingest
+```
+
+To clear existing stored chunks first:
+
+```bash
+npm run ingest:clear
+```
+
+Notes:
+
+- `docs/` is the ingestion source of truth.
+- `public/MOILitePaper.pdf` is kept separately because it is linked from the site UI.
+
+## Build
+
+Build the frontend:
+
+```bash
+npm run build
+```
+
+Preview the frontend build locally:
+
+```bash
+npm run preview
+```
+
+Run the backend in production mode:
+
+```bash
+npm start --prefix server
+```
+
+## Deployment
+
+Recommended deployment model:
+
+- frontend on Vercel
+- backend on Render or Railway
+- retrieval store on Supabase
+
+### Frontend
+
+Deploy the root app as a static Vite site and set:
+
+```bash
+VITE_CHATBOT_API=https://your-backend-url
+```
+
+### Backend
+
+Deploy `server/` as a Node service with these env vars:
+
+- `ANTHROPIC_API_KEY`
+- `OPENAI_API_KEY`
+- `SUPABASE_URL`
+- `SUPABASE_KEY`
+- `PORT`
+
+The backend exposes:
+
+- `GET /api/health`
+- `POST /api/chat`
+
+## Notes
+
+- Do not commit `.env`.
+- `CHATBOT_PROCESS.md` is internal process documentation and is not required for runtime.
+- The app currently uses a split frontend/backend architecture by design; this repo is not set up as a single full-stack deployment target.

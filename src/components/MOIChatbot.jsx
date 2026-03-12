@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
 
 const API_URL = import.meta.env.VITE_CHATBOT_API || "http://localhost:3001";
 
@@ -14,6 +15,7 @@ const COLORS = {
 };
 
 const FONT = '"DM Mono", monospace';
+const RENDER_INTERVAL_MS = 150;
 
 function TypingDots() {
   return (
@@ -55,25 +57,103 @@ function SourceTag({ source }) {
   );
 }
 
+function AssistantMessage({ content }) {
+  return (
+    <ReactMarkdown
+      components={{
+        p: ({ children }) => (
+          <p style={{ margin: "0 0 8px", lineHeight: 1.6 }}>{children}</p>
+        ),
+        ul: ({ children }) => (
+          <ul style={{ margin: "8px 0", paddingLeft: 18 }}>{children}</ul>
+        ),
+        ol: ({ children }) => (
+          <ol style={{ margin: "8px 0", paddingLeft: 18 }}>{children}</ol>
+        ),
+        li: ({ children }) => (
+          <li style={{ marginBottom: 4, lineHeight: 1.55 }}>{children}</li>
+        ),
+        strong: ({ children }) => (
+          <strong style={{ fontWeight: 600 }}>{children}</strong>
+        ),
+        code: ({ children }) => (
+          <code
+            style={{
+              fontFamily: FONT,
+              fontSize: "0.95em",
+              background: "rgba(26,26,26,0.06)",
+              padding: "0.08em 0.35em",
+              borderRadius: 4,
+            }}
+          >
+            {children}
+          </code>
+        ),
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+}
+
 export default function MOIChatbot() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const messagesContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const accumulatedTextRef = useRef("");
+  const renderTimerRef = useRef(null);
+  const isStreamingRef = useRef(false);
 
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = useCallback((behavior = "auto") => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
   }, []);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+    scrollToBottom(loading ? "auto" : "smooth");
+  }, [messages.length, loading, scrollToBottom]);
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
+
+  useEffect(() => {
+    return () => {
+      if (renderTimerRef.current) clearInterval(renderTimerRef.current);
+    };
+  }, []);
+
+  const commitTextToState = useCallback(() => {
+    const text = accumulatedTextRef.current;
+    if (!text) return;
+    setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.role === "assistant" && last.content !== text) {
+        return [...prev.slice(0, -1), { ...last, content: text }];
+      }
+      return prev;
+    });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
+    }
+  }, []);
+
+  const startRenderLoop = useCallback(() => {
+    if (renderTimerRef.current) return;
+    renderTimerRef.current = setInterval(commitTextToState, RENDER_INTERVAL_MS);
+  }, [commitTextToState]);
+
+  const stopRenderLoop = useCallback(() => {
+    if (renderTimerRef.current) {
+      clearInterval(renderTimerRef.current);
+      renderTimerRef.current = null;
+    }
+    commitTextToState();
+  }, [commitTextToState]);
 
   const sendMessage = async () => {
     const text = input.trim();
@@ -83,9 +163,12 @@ export default function MOIChatbot() {
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
+    accumulatedTextRef.current = "";
+    isStreamingRef.current = true;
 
-    const assistantMsg = { role: "assistant", content: "", sources: [] };
-    setMessages((prev) => [...prev, assistantMsg]);
+    setMessages((prev) => [...prev, { role: "assistant", content: "", sources: [] }]);
+
+    startRenderLoop();
 
     try {
       const history = [...messages, userMsg].slice(-10);
@@ -112,22 +195,14 @@ export default function MOIChatbot() {
           try {
             const payload = JSON.parse(line.slice(6));
             if (payload.type === "text") {
-              setMessages((prev) => {
-                const updated = [...prev];
-                const last = updated[updated.length - 1];
-                if (last?.role === "assistant") {
-                  last.content += payload.text;
-                }
-                return [...updated];
-              });
+              accumulatedTextRef.current += payload.text || "";
             } else if (payload.type === "sources") {
               setMessages((prev) => {
-                const updated = [...prev];
-                const last = updated[updated.length - 1];
+                const last = prev[prev.length - 1];
                 if (last?.role === "assistant") {
-                  last.sources = payload.sources || [];
+                  return [...prev.slice(0, -1), { ...last, sources: payload.sources || [] }];
                 }
-                return [...updated];
+                return prev;
               });
             }
           } catch {
@@ -136,16 +211,21 @@ export default function MOIChatbot() {
         }
       }
     } catch (err) {
+      accumulatedTextRef.current = "";
       setMessages((prev) => {
-        const updated = [...prev];
-        const last = updated[updated.length - 1];
+        const last = prev[prev.length - 1];
         if (last?.role === "assistant") {
-          last.content = "Sorry, something went wrong. Please try again.";
+          return [
+            ...prev.slice(0, -1),
+            { ...last, content: "Sorry, something went wrong. Please try again." },
+          ];
         }
-        return [...updated];
+        return prev;
       });
       console.error("Chat error:", err);
     } finally {
+      isStreamingRef.current = false;
+      stopRenderLoop();
       setLoading(false);
     }
   };
@@ -170,7 +250,6 @@ export default function MOIChatbot() {
         }
       `}</style>
 
-      {/* Chat panel */}
       {open && (
         <div
           style={{
@@ -191,7 +270,6 @@ export default function MOIChatbot() {
             overflow: "hidden",
           }}
         >
-          {/* Header */}
           <div
             style={{
               padding: "16px 20px",
@@ -222,8 +300,8 @@ export default function MOIChatbot() {
             </span>
           </div>
 
-          {/* Messages */}
           <div
+            ref={messagesContainerRef}
             style={{
               flex: 1,
               overflowY: "auto",
@@ -273,14 +351,22 @@ export default function MOIChatbot() {
                         msg.role === "user"
                           ? "14px 14px 4px 14px"
                           : "14px 14px 14px 4px",
-                      whiteSpace: "pre-wrap",
                       wordBreak: "break-word",
                     }}
                   >
-                    {msg.content ||
-                      (msg.role === "assistant" && loading && i === messages.length - 1 ? (
-                        <TypingDots />
-                      ) : null)}
+                    {msg.content ? (
+                      msg.role === "assistant" ? (
+                        loading && i === messages.length - 1 ? (
+                          <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
+                        ) : (
+                          <AssistantMessage content={msg.content} />
+                        )
+                      ) : (
+                        msg.content
+                      )
+                    ) : msg.role === "assistant" && loading && i === messages.length - 1 ? (
+                      <TypingDots />
+                    ) : null}
                   </div>
                 </div>
                 {msg.role === "assistant" && msg.sources?.length > 0 && (
@@ -297,7 +383,6 @@ export default function MOIChatbot() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input */}
           <div
             style={{
               padding: "12px 16px",
@@ -366,7 +451,6 @@ export default function MOIChatbot() {
         </div>
       )}
 
-      {/* Floating trigger */}
       <button
         onClick={() => setOpen((o) => !o)}
         style={{
