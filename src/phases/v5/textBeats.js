@@ -20,7 +20,7 @@ function inTransition(p) {
 }
 
 export function getActiveText(p) {
-  const hidden = inTransition(p) || p >= 0.94;
+  const hidden = inTransition(p) || p >= 0.97;
   let label = "";
   let title = "";
   let start = 0;
@@ -41,39 +41,44 @@ export function getActiveText(p) {
     end = 0.42;
     label = "THE PROBLEM";
     title = "Your tokens live in<br>someone else's contract";
-  } else if (p >= 0.47 && p < 0.52) {
+  } else if (p >= 0.47 && p < 0.54) {
     start = 0.47;
-    end = 0.52;
+    end = 0.54;
     label = "THE SOLUTION";
-    title = "Meet the participant";
-  } else if (p >= 0.52 && p < 0.555) {
-    start = 0.52;
-    end = 0.555;
+    title = "Delegation is scoped and signed";
+  } else if (p >= 0.54 && p < 0.61) {
+    start = 0.54;
+    end = 0.61;
     label = "CONTEXT SUPERSTATE";
     title = "Your preferences follow you";
-  } else if (p >= 0.555 && p < 0.59) {
-    start = 0.555;
-    end = 0.59;
-    label = "CONTEXT SUPERSTATE";
-    title = "Your assets live with you";
-  } else if (p >= 0.59 && p < 0.625) {
-    start = 0.59;
-    end = 0.625;
-    label = "CONTEXT SUPERSTATE";
-    title = "You control who sees what";
-  } else if (p >= 0.625 && p < 0.68) {
-    start = 0.625;
+  } else if (p >= 0.61 && p < 0.68) {
+    start = 0.61;
     end = 0.68;
     label = "CONTEXT SUPERSTATE";
-    title = "Every interaction makes it richer";
-  } else if (p >= 0.68 && p < 0.82) {
+    title = "Your assets live with you";
+  } else if (p >= 0.68 && p < 0.75) {
     start = 0.68;
+    end = 0.75;
+    label = "CONTEXT SUPERSTATE";
+    title = "You control who sees what";
+  } else if (p >= 0.75 && p < 0.82) {
+    start = 0.75;
     end = 0.82;
+    label = "CONTEXT SUPERSTATE";
+    title = "Trust is earned, not assumed";
+  } else if (p >= 0.82 && p < 0.88) {
+    start = 0.82;
+    end = 0.88;
+    label = "CONTEXT SUPERSTATE";
+    title = "Every interaction makes it richer";
+  } else if (p >= 0.88 && p < 0.93) {
+    start = 0.88;
+    end = 0.93;
     label = "PARTICIPANT LAYER";
     title = "Independent. Parallel.";
-  } else if (p >= 0.82 && p < 0.94) {
-    start = 0.82;
-    end = 0.94;
+  } else if (p >= 0.93 && p < 0.97) {
+    start = 0.93;
+    end = 0.97;
     label = "THE PARTICIPANT LAYER";
     title = "Independent. Parallel.<br>Participant-centric.";
   }

@@ -34,13 +34,32 @@ const AGENTS = [
   },
 ];
 
-let evaporatingParticles = [];
-let phase2LastT = 0;
-const spawned = [false, false, false];
+// Default module-level state (used when no external particleState is passed)
+let _evaporatingParticles = [];
+let _phase2LastT = 0;
+const _spawned = [false, false, false];
 
-function spawnEvaporation(bx, by, bw, bh, color) {
+function getState(particleState) {
+  if (particleState) {
+    if (!particleState.evaporatingParticles) {
+      particleState.evaporatingParticles = [];
+      particleState.phase2LastT = 0;
+      particleState.spawned = [false, false, false];
+    }
+    return particleState;
+  }
+  return {
+    get evaporatingParticles() { return _evaporatingParticles; },
+    set evaporatingParticles(v) { _evaporatingParticles = v; },
+    get phase2LastT() { return _phase2LastT; },
+    set phase2LastT(v) { _phase2LastT = v; },
+    spawned: _spawned,
+  };
+}
+
+function spawnEvaporation(ps, bx, by, bw, bh, color) {
   for (let i = 0; i < 36; i++) {
-    evaporatingParticles.push({
+    ps.evaporatingParticles.push({
       x: bx + Math.random() * bw,
       y: by + 36 + Math.random() * (bh - 44),
       vx: (Math.random() - 0.5) * 0.3,
@@ -53,15 +72,15 @@ function spawnEvaporation(bx, by, bw, bh, color) {
   }
 }
 
-function updateAndDrawParticles(ctx, alpha) {
-  for (let i = evaporatingParticles.length - 1; i >= 0; i--) {
-    const p = evaporatingParticles[i];
+function updateAndDrawParticles(ctx, alpha, ps) {
+  for (let i = ps.evaporatingParticles.length - 1; i >= 0; i--) {
+    const p = ps.evaporatingParticles[i];
     p.x += p.vx;
     p.y += p.vy;
     p.vy -= 0.003;
     p.life -= p.decay;
     if (p.life <= 0) {
-      evaporatingParticles.splice(i, 1);
+      ps.evaporatingParticles.splice(i, 1);
       continue;
     }
     ctx.save();
@@ -172,17 +191,19 @@ function drawAgentBubble(ctx, x, y, agent, fillProgress, evapProgress, alpha) {
   return { w, h };
 }
 
-export function drawContextEvaporation(ctx, state, tl, { cy, W }) {
+export function drawContextEvaporation(ctx, state, tl, { cy, W }, particleState) {
   const { phase2Alpha, phase2T } = tl;
   if (phase2Alpha <= 0.01) return;
 
-  if (phase2T < phase2LastT - 0.05) {
-    evaporatingParticles = [];
-    spawned[0] = false;
-    spawned[1] = false;
-    spawned[2] = false;
+  const ps = getState(particleState);
+
+  if (phase2T < ps.phase2LastT - 0.05) {
+    ps.evaporatingParticles = [];
+    ps.spawned[0] = false;
+    ps.spawned[1] = false;
+    ps.spawned[2] = false;
   }
-  phase2LastT = phase2T;
+  ps.phase2LastT = phase2T;
 
   const aliceX = Math.max(72, W * 0.12);
   const aliceY = cy;
@@ -228,10 +249,10 @@ export function drawContextEvaporation(ctx, state, tl, { cy, W }) {
     drawArrow(ctx, aliceX + 32, aliceY, bubbleX - 18, ys[i], active, a.color, state.time + i * 17, phase2Alpha * appear);
 
     if (a.evapEnd > a.dwellEnd) {
-      if (phase2T < a.dwellEnd - 0.02) spawned[i] = false;
-      if (phase2T >= a.dwellEnd && !spawned[i]) {
-        spawnEvaporation(bubbleX, ys[i] - 72, b.w, b.h, a.color);
-        spawned[i] = true;
+      if (phase2T < a.dwellEnd - 0.02) ps.spawned[i] = false;
+      if (phase2T >= a.dwellEnd && !ps.spawned[i]) {
+        spawnEvaporation(ps, bubbleX, ys[i] - 72, b.w, b.h, a.color);
+        ps.spawned[i] = true;
       }
     }
 
@@ -254,7 +275,7 @@ export function drawContextEvaporation(ctx, state, tl, { cy, W }) {
     }
   }
 
-  updateAndDrawParticles(ctx, phase2Alpha);
+  updateAndDrawParticles(ctx, phase2Alpha, ps);
 
   if (phase2T > 0.82) {
     ctx.save();

@@ -10,15 +10,32 @@ const ENTRIES = [
   { key: "frank", value: 78, color: "#7A8B5A", delay: 0.30 },
 ];
 
-let leakParticles = [];
-let lastPhase3T = 0;
+// Default module-level state (used when no external particleState is passed)
+let _leakParticles = [];
+let _lastPhase3T = 0;
+
+function getState(particleState) {
+  if (particleState) {
+    if (!particleState.leakParticles) {
+      particleState.leakParticles = [];
+      particleState.lastPhase3T = 0;
+    }
+    return particleState;
+  }
+  return {
+    get leakParticles() { return _leakParticles; },
+    set leakParticles(v) { _leakParticles = v; },
+    get lastPhase3T() { return _lastPhase3T; },
+    set lastPhase3T(v) { _lastPhase3T = v; },
+  };
+}
 
 function lerp(a, b, t) {
   return a + (b - a) * t;
 }
 
-function spawnLeakParticles(leakX, leakY, vaultH) {
-  leakParticles.push({
+function spawnLeakParticles(ps, leakX, leakY, vaultH) {
+  ps.leakParticles.push({
     x: leakX + (Math.random() - 0.5) * 10,
     y: leakY + Math.random() * vaultH * 0.7,
     vx: 0.4 + Math.random() * 0.9,
@@ -29,14 +46,14 @@ function spawnLeakParticles(leakX, leakY, vaultH) {
   });
 }
 
-function updateAndDrawLeakParticles(ctx, phase3Alpha) {
-  for (let i = leakParticles.length - 1; i >= 0; i--) {
-    const lp = leakParticles[i];
+function updateAndDrawLeakParticles(ctx, phase3Alpha, ps) {
+  for (let i = ps.leakParticles.length - 1; i >= 0; i--) {
+    const lp = ps.leakParticles[i];
     lp.x += lp.vx;
     lp.y += lp.vy;
     lp.life -= lp.decay;
     if (lp.life <= 0) {
-      leakParticles.splice(i, 1);
+      ps.leakParticles.splice(i, 1);
       continue;
     }
     ctx.save();
@@ -49,12 +66,14 @@ function updateAndDrawLeakParticles(ctx, phase3Alpha) {
   }
 }
 
-export function drawContractBox(ctx, state, tl, { cx, cy, W }) {
+export function drawContractBox(ctx, state, tl, { cx, cy, W }, particleState) {
   const { phase3Alpha, phase3T } = tl;
   if (phase3Alpha <= 0.01) return;
 
-  if (phase3T < lastPhase3T - 0.05) leakParticles = [];
-  lastPhase3T = phase3T;
+  const ps = getState(particleState);
+
+  if (phase3T < ps.lastPhase3T - 0.05) ps.leakParticles = [];
+  ps.lastPhase3T = phase3T;
 
   const pp = phase3T;
   const setupT = smoothstep(ramp(pp, 0.00, 0.15));
@@ -184,9 +203,9 @@ export function drawContractBox(ctx, state, tl, { cx, cy, W }) {
   ctx.restore();
 
   if (pp >= 0.58 && pp <= 0.98 && leakT > 0.06 && state.time % 3 === 0) {
-    spawnLeakParticles(leakPortX, leakPortY, vaultH - 50);
+    spawnLeakParticles(ps, leakPortX, leakPortY, vaultH - 50);
   }
-  updateAndDrawLeakParticles(ctx, phase3Alpha * setupT);
+  updateAndDrawLeakParticles(ctx, phase3Alpha * setupT, ps);
 
   if (bugT > 0.001 || leakT > 0.001) {
     ctx.save();

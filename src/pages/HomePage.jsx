@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import MOIChatbot from "../components/MOIChatbot";
+import Navbar from "../components/Navbar";
+import BadgePill from "../components/BadgePill";
+import { useScrollReveal } from "../hooks/useScrollReveal";
 
 const LITEPAPER_URL = "/MOILitePaper.pdf";
-const NAV_H = 72;
+const NAV_H = 88;
 const SPACING = 85;
 const AMBIENT_HIGHLIGHT_MS = 2500;
 const AMBIENT_GLOW_MS = 2000;
@@ -331,7 +334,7 @@ function ParticipantCanvas() {
     if (!canvas) return;
     const dpr = window.devicePixelRatio || 1;
     const W = window.innerWidth;
-    const H = window.innerHeight - NAV_H;
+    const H = window.innerHeight;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     canvas.style.width = W + "px";
@@ -474,7 +477,7 @@ function ParticipantCanvas() {
           const bgX = drawRight ? labelX - 4 : labelX - tw - 4;
           const bgW = tw + 8;
           const bgH = 14;
-          ctx.fillStyle = `rgba(245,243,238,${n.labelOpacity * 0.88})`;
+          ctx.fillStyle = `rgba(255,255,255,${n.labelOpacity * 0.88})`;
           ctx.beginPath();
           ctx.roundRect(bgX, labelY - bgH / 2, bgW, bgH, 3);
           ctx.fill();
@@ -495,8 +498,41 @@ function ParticipantCanvas() {
     <canvas
       ref={canvasRef}
       className="fixed z-0"
-      style={{ top: NAV_H, left: 0, background: "#F5F3EE" }}
+      style={{ top: 0, left: 0, background: "transparent" }}
     />
+  );
+}
+
+const FEATURES = [
+  {
+    title: "Context Ownership",
+    description: "Participants own their digital context \u2014 preferences, assets, permissions, and trust \u2014 as a unified, portable identity.",
+    icon: "\u26A1",
+  },
+  {
+    title: "Contextual Compute",
+    description: "Computation happens where context lives. No more sending your data to someone else\u2019s server to get things done.",
+    icon: "\u2699\uFE0F",
+  },
+  {
+    title: "Autonomous Agents",
+    description: "Agents act on your behalf with scoped permissions, carrying your full context across any application or chain.",
+    icon: "\u{1F916}",
+  },
+];
+
+function FeatureCard({ feature, delay }) {
+  const ref = useScrollReveal();
+  return (
+    <div
+      ref={ref}
+      className="fade-slide-up card-surface p-8"
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      <div className="text-3xl mb-4">{feature.icon}</div>
+      <h3 className="font-serif text-xl text-[#1A1A1A] mb-3">{feature.title}</h3>
+      <p className="font-mono text-[12px] leading-relaxed text-[#1A1A1A]/40">{feature.description}</p>
+    </div>
   );
 }
 
@@ -505,7 +541,22 @@ export default function HomePage() {
   const [lineIndex, setLineIndex] = useState(0);
   const [charIndex, setCharIndex] = useState(0);
   const [showContent, setShowContent] = useState(false);
+  const [heroOpacity, setHeroOpacity] = useState(1);
   const timersRef = useRef([]);
+  const heroRef = useRef(null);
+
+  const whatRef = useScrollReveal();
+  const howRef = useScrollReveal();
+  const ctaRef = useScrollReveal();
+
+  useEffect(() => {
+    const onScroll = () => {
+      const fade = Math.max(0, 1 - window.scrollY / (window.innerHeight * 0.5));
+      setHeroOpacity(fade);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     if (!isLoading) return;
@@ -545,7 +596,7 @@ export default function HomePage() {
       {/* Loading overlay */}
       {isLoading && (
         <div
-          className="fixed inset-0 z-[100] flex cursor-pointer items-center justify-center bg-[#F5F3EE] transition-opacity duration-[800ms] ease-out"
+          className="fixed inset-0 z-[100] flex cursor-pointer items-center justify-center bg-hero-gradient transition-opacity duration-[800ms] ease-out"
           style={{ opacity: showContent ? 0 : 1 }}
           onClick={skipAnimation}
           onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && skipAnimation()}
@@ -580,76 +631,149 @@ export default function HomePage() {
         className="relative min-h-screen transition-opacity duration-[800ms] ease-out"
         style={{ opacity: showContent ? 1 : 0 }}
       >
-        <ParticipantCanvas />
+        {/* Gradient backdrop behind canvas */}
+        <div className="fixed inset-0 z-[-1] bg-hero-gradient" />
 
-        {/* Navigation */}
-        <nav
-          className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between px-10 lg:px-16 h-[72px]"
-          style={{ background: "#F5F3EE", borderBottom: "1px solid rgba(26,26,26,0.08)" }}
-        >
-          <div className="flex items-center gap-3">
-            <img
-              src="/logo-moi-mark.png"
-              alt="MOI logo"
-              className="h-12 w-12 shrink-0"
-            />
-            <span className="font-mono text-xs tracking-[0.35em] uppercase font-medium text-[#1A1A1A]">
-              MOI
-            </span>
-          </div>
-          <div className="flex items-center gap-10">
-            <a
-              href="https://docs.moi.technology"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#1A1A1A]/30 hover:text-[#1A1A1A] transition-colors duration-300"
-              style={{ fontWeight: 400 }}
-            >
-              Docs
-            </a>
-            <Link
-              to="/how-it-works"
-              className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#1A1A1A]/30 hover:text-[#1A1A1A] transition-colors duration-300"
-              style={{ fontWeight: 400 }}
-            >
-              How it works
-            </Link>
-            <a
-              href={LITEPAPER_URL}
-              className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#1A1A1A]/30 hover:text-[#1A1A1A] transition-colors duration-300"
-              style={{ fontWeight: 400 }}
-            >
-              Litepaper
-            </a>
-          </div>
-        </nav>
+        <ParticipantCanvas />
+        <Navbar activePage="home" />
 
         {/* Hero overlay */}
         <div
-          className="fixed left-0 right-0 bottom-0 z-10 flex flex-col items-center justify-center pointer-events-none"
-          style={{ top: NAV_H }}
+          ref={heroRef}
+          className="fixed left-0 right-0 bottom-0 z-10 flex flex-col items-center justify-center pointer-events-none transition-opacity duration-100"
+          style={{ top: NAV_H, opacity: heroOpacity }}
         >
-          <h1 className="font-serif text-[clamp(3.5rem,10vw,9rem)] leading-[0.82] tracking-[-0.03em] text-center text-[#1A1A1A]">
-            The Participant<br />
-            Layer
+          <BadgePill>The Participant Layer</BadgePill>
+
+          <h1 className="font-serif text-[clamp(3.5rem,10vw,9rem)] leading-[0.82] tracking-[-0.03em] text-center text-[#1A1A1A] mt-6">
+            Context is the<br />
+            New Currency
           </h1>
 
-          <p className="font-mono text-[13px] tracking-[0.06em] mt-12 text-center">
+          <p className="font-mono text-[13px] tracking-[0.06em] mt-10 text-center">
             <span className="text-[#1A1A1A]/30">Powered by </span>
             <span className="text-[#1A1A1A]/70 font-medium">Contextual Compute</span>
           </p>
 
-          <a
-            href={LITEPAPER_URL}
-            className="pointer-events-auto relative inline-flex items-center gap-3 mt-8 px-10 py-3 rounded-full bg-[#F5F3EE] hover:bg-[#1A1A1A] border border-[#1A1A1A]/20 hover:border-[#1A1A1A] shadow-[0_1px_4px_rgba(0,0,0,0.06)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.09)] transition-all duration-300 group"
-          >
-            <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#1A1A1A]/85 group-hover:text-[#F5F3EE] transition-colors duration-300">
-              Read Litepaper
-            </span>
-            <span className="text-[11px] text-[#1A1A1A]/40 group-hover:text-[#F5F3EE]/70 group-hover:translate-x-0.5 transition-all duration-300">
-              →
-            </span>
-          </a>
+          <div className="flex gap-4 mt-8 pointer-events-auto">
+            <a
+              href={LITEPAPER_URL}
+              className="inline-flex items-center gap-3 px-8 py-3 rounded-full bg-[#1A1A1A] hover:bg-[#7B5EA7] border border-[#1A1A1A] shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-all duration-300 group"
+            >
+              <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#F5F3EE]">
+                Read Litepaper
+              </span>
+              <span className="text-[11px] text-[#F5F3EE]/60 group-hover:translate-x-0.5 transition-transform duration-300">
+                →
+              </span>
+            </a>
+            <a
+              href="https://docs.moi.technology"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-3 px-8 py-3 rounded-full bg-white/70 hover:bg-white border border-[#1A1A1A]/15 hover:border-[#1A1A1A]/30 backdrop-blur-sm shadow-[0_1px_4px_rgba(0,0,0,0.06)] transition-all duration-300 group"
+            >
+              <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#1A1A1A]/70 group-hover:text-[#1A1A1A]">
+                Explore Docs
+              </span>
+              <span className="text-[11px] text-[#1A1A1A]/30 group-hover:translate-x-0.5 transition-transform duration-300">
+                →
+              </span>
+            </a>
+          </div>
+        </div>
+
+        {/* Spacer for fixed hero */}
+        <div style={{ height: "100vh" }} />
+
+        {/* ── Below-fold sections ── */}
+        <div className="relative z-20">
+
+          {/* What is MOI */}
+          <section className="py-28 md:py-36 px-6 md:px-8" style={{ background: "rgba(245,243,238,0.85)" }}>
+            <div className="max-w-5xl mx-auto">
+              <div ref={whatRef} className="fade-slide-up text-center mb-16">
+                <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#7B5EA7] font-medium">
+                  What is MOI
+                </span>
+                <h2 className="font-serif text-[clamp(2rem,4.5vw,3.5rem)] leading-[1.1] text-[#1A1A1A] mt-4 max-w-2xl mx-auto">
+                  A protocol where participants own their context
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {FEATURES.map((f, i) => (
+                  <FeatureCard key={f.title} feature={f} delay={i * 120} />
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* How It Works teaser */}
+          <section className="py-28 md:py-36 px-6 md:px-8" style={{ background: "rgba(245,243,238,0.85)" }}>
+            <div ref={howRef} className="fade-slide-up max-w-5xl mx-auto card-surface p-0 overflow-hidden grid grid-cols-1 md:grid-cols-2">
+              <div
+                className="p-10 md:p-14 flex items-center justify-center min-h-[280px]"
+                style={{
+                  background: "linear-gradient(135deg, rgba(123,94,167,0.08) 0%, rgba(184,212,227,0.15) 100%)",
+                }}
+              >
+                <div className="text-center">
+                  <div className="font-serif text-[clamp(2.5rem,6vw,5rem)] leading-[0.9] text-[#7B5EA7]/20">
+                    WHO
+                  </div>
+                  <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#7B5EA7]/40 mt-3">
+                    is missing
+                  </div>
+                </div>
+              </div>
+              <div className="p-10 md:p-14 flex flex-col justify-center">
+                <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#7B5EA7] font-medium">
+                  How It Works
+                </span>
+                <h2 className="font-serif text-[clamp(1.5rem,3vw,2.5rem)] leading-[1.15] text-[#1A1A1A] mt-4">
+                  Contextual Compute in action
+                </h2>
+                <p className="font-mono text-[12px] leading-relaxed text-[#1A1A1A]/35 mt-4">
+                  See how MOI solves delegation, context evaporation, and contract vulnerability through the participant layer.
+                </p>
+                <Link
+                  to="/how-it-works"
+                  className="inline-flex items-center gap-2 mt-8 px-6 py-2.5 rounded-full bg-[#1A1A1A] hover:bg-[#7B5EA7] text-[#F5F3EE] font-mono text-[10px] tracking-[0.15em] uppercase transition-all duration-300 self-start"
+                >
+                  See the full story
+                  <span className="text-[11px] text-[#F5F3EE]/60">→</span>
+                </Link>
+              </div>
+            </div>
+          </section>
+
+          {/* Footer CTA */}
+          <section className="py-28 md:py-40 px-6 md:px-8" style={{ background: "rgba(245,243,238,0.8)" }}>
+            <div ref={ctaRef} className="fade-slide-up max-w-3xl mx-auto text-center">
+              <h2 className="font-serif text-[clamp(2rem,5vw,4rem)] leading-[1.1] text-[#1A1A1A]">
+                Your context. Your assets.<br />Your rules.
+              </h2>
+              <p className="font-mono text-[13px] leading-relaxed text-[#1A1A1A]/35 mt-6 max-w-md mx-auto">
+                Read the litepaper, explore the docs, or start building with Cocolang.
+              </p>
+              <div className="flex gap-4 justify-center mt-10">
+                <a
+                  href={LITEPAPER_URL}
+                  className="inline-flex items-center gap-3 px-8 py-3 rounded-full bg-[#1A1A1A] hover:bg-[#7B5EA7] text-[#F5F3EE] font-mono text-[10px] tracking-[0.15em] uppercase transition-all duration-300"
+                >
+                  Read Litepaper →
+                </a>
+                <a
+                  href="https://docs.moi.technology"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-3 px-8 py-3 rounded-full bg-white/70 hover:bg-white border border-[#1A1A1A]/15 hover:border-[#1A1A1A]/30 backdrop-blur-sm font-mono text-[10px] tracking-[0.15em] uppercase text-[#1A1A1A]/70 hover:text-[#1A1A1A] transition-all duration-300"
+                >
+                  Explore Docs →
+                </a>
+              </div>
+            </div>
+          </section>
         </div>
 
         <MOIChatbot />

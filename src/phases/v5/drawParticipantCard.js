@@ -22,12 +22,12 @@ const TOKENS = [
 ];
 
 const BRANCHES = [
-  { key: "authority",    color: COLORS.authority,    dir: "up",          ppStart: 0.06, ppEnd: 0.25 },
-  { key: "preferences",  color: COLORS.preferences,  dir: "left",        ppStart: 0.25, ppEnd: 0.46 },
-  { key: "assets",       color: COLORS.assets,       dir: "right",       ppStart: 0.46, ppEnd: 0.67 },
-  { key: "permissions",  color: COLORS.permissions,  dir: "down",        ppStart: 0.67, ppEnd: 0.82 },
-  { key: "trust",        color: COLORS.trust,        dir: "upper-right", ppStart: 0.82, ppEnd: 0.87 },
-  { key: "history",      color: COLORS.history,      dir: "lower-right", ppStart: 0.87, ppEnd: 0.92 },
+  { key: "authority",    color: COLORS.authority,    dir: "up",          ppStart: 0.03, ppEnd: 0.18 },
+  { key: "preferences",  color: COLORS.preferences,  dir: "left",        ppStart: 0.18, ppEnd: 0.33 },
+  { key: "assets",       color: COLORS.assets,       dir: "right",       ppStart: 0.33, ppEnd: 0.48 },
+  { key: "permissions",  color: COLORS.permissions,  dir: "down",        ppStart: 0.48, ppEnd: 0.63 },
+  { key: "trust",        color: COLORS.trust,        dir: "upper-right", ppStart: 0.63, ppEnd: 0.78 },
+  { key: "history",      color: COLORS.history,      dir: "lower-right", ppStart: 0.78, ppEnd: 0.93 },
 ];
 
 function easeOutCubic(t) {
@@ -55,14 +55,15 @@ function getBranchTarget(cx, cy, dir, offset) {
   }
 }
 
-function getPanelAnchor(cx, cy, dir, pw, ph, W, H) {
+function getPanelAnchor(cx, cy, dir, pw, ph, W, H, gap) {
   const margin = 24;
+  const g = gap || 80;
   const goLeft = dir === "left" || dir === "lower-right";
   let px, py;
   if (goLeft) {
-    px = clamp(margin, cx - pw - 80, W - pw - margin);
+    px = clamp(margin, cx - pw - g, W - pw - margin);
   } else {
-    px = clamp(margin, cx + 80, W - pw - margin);
+    px = clamp(margin, cx + g, W - pw - margin);
   }
   py = clamp(margin, cy - ph / 2, H - ph - margin);
   return { x: px, y: py };
@@ -556,8 +557,8 @@ export function drawParticipantCard(ctx, state, tl, { cx, cy, W, H }) {
   const pp = phase4T;
   const scale = Math.max(0.5, Math.min(W, H) / 900);
   const nucleusIn = spring(ramp(pp, 0.00, 0.06));
-  const stubsIn = smoothstep(ramp(pp, 0.92, 1.00));
-  const captionIn = smoothstep(ramp(pp, 0.92, 1.00));
+  const stubsIn = smoothstep(ramp(pp, 0.93, 1.00));
+  const captionIn = smoothstep(ramp(pp, 0.93, 1.00));
   const offset = clamp(130, W * 0.16, 240) * scale;
 
   ctx.save();
@@ -577,7 +578,8 @@ export function drawParticipantCard(ctx, state, tl, { cx, cy, W, H }) {
 
     const pw = STANDARD_PANEL.w * scale;
     const ph = STANDARD_PANEL.h * scale;
-    const anchor = getPanelAnchor(cx, cy, b.dir, pw, ph, W, H);
+    const gap = clamp(120, W * 0.14, 220) * scale;
+    const anchor = getPanelAnchor(cx, cy, b.dir, pw, ph, W, H, gap);
     const goLeft = b.dir === "left" || b.dir === "lower-right";
     const edgeX = goLeft ? anchor.x + pw : anchor.x;
     const edgeY = anchor.y + ph / 2;
