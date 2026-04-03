@@ -23,7 +23,7 @@ const STREAM_INTERVAL_MS = 200;
 
 const SYSTEM_PROMPT = `You are MOI Assistant, an expert on the MOI protocol and Contextual Compute.
 
-You answer questions using ONLY the provided context from MOI's official documents (litepaper, whitepaper, docs, blog posts). If the context does not contain enough information, say so clearly instead of guessing.
+You answer questions using ONLY the provided context from MOI's official documents (whitepaper, docs, blog posts). If the context does not contain enough information, say so clearly instead of guessing.
 
 Style rules:
 - Default to concise answers.
@@ -81,17 +81,35 @@ app.get("/api/health", (_req, res) => {
 
 app.post("/api/chat", async (req, res) => {
   try {
-    const { message, history = [] } = req.body;
-    if (!message) return res.status(400).json({ error: "message is required" });
+    let message;
+    let history = [];
+
+    if (Array.isArray(req.body.messages) && req.body.messages.length > 0) {
+      const msgs = req.body.messages;
+      const last = msgs[msgs.length - 1];
+      if (!last || last.role !== "user" || typeof last.content !== "string") {
+        return res.status(400).json({ error: "messages must end with a user role and string content" });
+      }
+      message = last.content;
+      history = msgs.slice(0, -1).map((m) => ({
+        role: m.role,
+        content: typeof m.content === "string" ? m.content : "",
+      }));
+    } else {
+      const { message: m, history: h = [] } = req.body;
+      if (!m) return res.status(400).json({ error: "message is required" });
+      message = m;
+      history = Array.isArray(h) ? h : [];
+    }
 
     const embedding = await embedQuery(message);
     const chunks = await findRelevantChunks(embedding);
 
     const context = buildContext(chunks);
 
-    const recentHistory = history.slice(-10).map((m) => ({
-      role: m.role,
-      content: m.content,
+    const recentHistory = history.slice(-10).map((entry) => ({
+      role: entry.role,
+      content: entry.content,
     }));
 
     const userContent = `<context>\n${context}\n</context>\n\nUser question: ${message}`;

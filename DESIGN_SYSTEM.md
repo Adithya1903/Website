@@ -443,7 +443,7 @@ color: #7B5EA7;
 | Asset          | Path                 |
 |----------------|----------------------|
 | Logo mark      | `/logo-moi-mark.png` |
-| Litepaper PDF  | `/MOILitePaper.pdf`  |
+| Whitepaper PDF  | `/MOILitePaper.pdf`  |
 
 ---
 

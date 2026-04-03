@@ -1,4 +1,7 @@
-export const LITEPAPER_URL = "/MOILitePaper.pdf";
+/** PDF asset (file still named MOILitePaper.pdf in /public) */
+export const WHITEPAPER_URL = "/MOILitePaper.pdf";
+
+export const WHITEPAPER_SITE_URL = "https://moi.technology/whitepaper";
 export const NAV_H = 72;
 
 export const PARTICIPANTS = [

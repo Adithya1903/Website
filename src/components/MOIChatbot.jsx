@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
+import { stripMarkdown } from "../../lib/websiteChat.js";
 
 const API_URL = import.meta.env.VITE_CHATBOT_API || "http://localhost:3001";
 
@@ -129,10 +130,11 @@ export default function MOIChatbot() {
   const commitTextToState = useCallback(() => {
     const text = accumulatedTextRef.current;
     if (!text) return;
+    const plain = stripMarkdown(text);
     setMessages((prev) => {
       const last = prev[prev.length - 1];
-      if (last?.role === "assistant" && last.content !== text) {
-        return [...prev.slice(0, -1), { ...last, content: text }];
+      if (last?.role === "assistant" && last.content !== plain) {
+        return [...prev.slice(0, -1), { ...last, content: plain }];
       }
       return prev;
     });
@@ -171,42 +173,81 @@ export default function MOIChatbot() {
     startRenderLoop();
 
     try {
-      const history = [...messages, userMsg].slice(-10);
+      const apiMessages = [...messages, userMsg].slice(-10);
       const res = await fetch(`${API_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history }),
+        body: JSON.stringify({ messages: apiMessages }),
       });
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
+      if (!res.ok) {
+        let errText = "Sorry, something went wrong. Please try again.";
+        try {
+          const j = await res.json();
+          if (typeof j?.error === "string") errText = j.error;
+        } catch {
           try {
-            const payload = JSON.parse(line.slice(6));
-            if (payload.type === "text") {
-              accumulatedTextRef.current += payload.text || "";
-            } else if (payload.type === "sources") {
-              setMessages((prev) => {
-                const last = prev[prev.length - 1];
-                if (last?.role === "assistant") {
-                  return [...prev.slice(0, -1), { ...last, sources: payload.sources || [] }];
+            const t = await res.text();
+            if (t) errText = t.slice(0, 300);
+          } catch { /* ignore */ }
+        }
+        accumulatedTextRef.current = errText;
+      } else {
+        const ct = (res.headers.get("content-type") || "").toLowerCase();
+        const isSse =
+          ct.includes("text/event-stream") || ct.includes("event-stream");
+
+        if (!isSse) {
+          let full = "";
+          if (ct.includes("application/json")) {
+            try {
+              const data = await res.json();
+              full =
+                (typeof data.response === "string" && data.response) ||
+                (typeof data.text === "string" && data.text) ||
+                (typeof data.message === "string" && data.message) ||
+                (typeof data.content === "string" && data.content) ||
+                "";
+            } catch { /* ignore */ }
+          } else {
+            try {
+              full = await res.text();
+            } catch { /* ignore */ }
+          }
+          accumulatedTextRef.current =
+            full.trim() || "Sorry, something went wrong. Please try again.";
+        } else {
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue;
+              try {
+                const payload = JSON.parse(line.slice(6));
+                if (payload.type === "text") {
+                  accumulatedTextRef.current += payload.text || "";
+                } else if (payload.type === "sources") {
+                  setMessages((prev) => {
+                    const last = prev[prev.length - 1];
+                    if (last?.role === "assistant") {
+                      return [...prev.slice(0, -1), { ...last, sources: payload.sources || [] }];
+                    }
+                    return prev;
+                  });
                 }
-                return prev;
-              });
+              } catch {
+                /* skip malformed SSE lines */
+              }
             }
-          } catch {
-            /* skip malformed SSE lines */
           }
         }
       }

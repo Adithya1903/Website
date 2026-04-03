@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-const LITEPAPER_URL = "/MOILitePaper.pdf";
+import { WHITEPAPER_URL } from "../phases/constants.js";
 
 export default function Navbar({ activePage = "home" }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -50,10 +50,10 @@ export default function Navbar({ activePage = "home" }) {
         {/* Right CTAs — desktop */}
         <div className="hidden md:flex items-center gap-3 shrink-0">
           <a
-            href={LITEPAPER_URL}
+            href={WHITEPAPER_URL}
             className="font-mono text-[10px] tracking-[0.15em] uppercase text-[#1A1A1A]/60 hover:text-[#1A1A1A] border border-[#1A1A1A]/15 hover:border-[#1A1A1A]/30 rounded-full px-5 py-2 transition-all duration-300"
           >
-            Litepaper
+            Whitepaper
           </a>
           <a
             href="https://voyage.moi.technology"
@@ -102,7 +102,7 @@ export default function Navbar({ activePage = "home" }) {
           <Link to="/how-it-works" className={linkClass("how-it-works")} onClick={() => setMenuOpen(false)}>How it works</Link>
           <a href="https://docs.moi.technology" target="_blank" rel="noopener noreferrer" className={linkClass("docs")}>Docs</a>
           <hr className="border-[#1A1A1A]/8" />
-          <a href={LITEPAPER_URL} className="font-mono text-[10px] tracking-[0.15em] uppercase text-[#1A1A1A]/60">Litepaper</a>
+          <a href={WHITEPAPER_URL} className="font-mono text-[10px] tracking-[0.15em] uppercase text-[#1A1A1A]/60">Whitepaper</a>
           <a
             href="https://voyage.moi.technology"
             target="_blank"

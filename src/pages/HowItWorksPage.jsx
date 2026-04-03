@@ -1,6 +1,6 @@
 import { useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { LITEPAPER_URL, NAV_H, PARTICIPANTS, P_COUNT } from "../phases/constants.js";
+import { WHITEPAPER_URL, NAV_H, PARTICIPANTS, P_COUNT } from "../phases/constants.js";
 import { computeTimeline } from "../phases/timing.js";
 import { drawFunnel } from "../phases/drawFunnel.js";
 import { drawLiberation } from "../phases/drawLiberation.js";
@@ -483,11 +483,11 @@ export default function HowItWorksPage() {
             How it works
           </span>
           <a
-            href={LITEPAPER_URL}
+            href={WHITEPAPER_URL}
             className="font-mono text-[11px] tracking-[0.18em] uppercase text-[#1A1A1A]/50 hover:text-[#1A1A1A] transition-colors duration-300"
             style={{ fontWeight: 500 }}
           >
-            Litepaper
+            Whitepaper
           </a>
         </div>
       </nav>
@@ -500,7 +500,7 @@ export default function HowItWorksPage() {
             <div ref={cTitleRef} className="canvas-title" />
             <div className="canvas-cta-row">
               <a href="https://docs.moi.technology" target="_blank" rel="noopener noreferrer" className="canvas-cta-primary">Explore the network</a>
-              <a href="/MOILitePaper.pdf" className="canvas-cta-secondary">Read the litepaper</a>
+              <a href="/MOILitePaper.pdf" className="canvas-cta-secondary">Read the whitepaper</a>
             </div>
           </div>
         </div>
@@ -588,8 +588,8 @@ export default function HowItWorksPage() {
 
       <div className="how-cta">
         <h2>Ready to build on<br />the Participant Layer?</h2>
-        <p>Read the litepaper, explore the docs, or start building with Cocolang.</p>
-        <a href={LITEPAPER_URL} className="cta-btn">READ LITEPAPER &rarr;</a>
+        <p>Read the whitepaper, explore the docs, or start building with Cocolang.</p>
+        <a href={WHITEPAPER_URL} className="cta-btn">READ WHITEPAPER &rarr;</a>
       </div>
     </>
   );

@@ -3,11 +3,10 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Navbar from "../components/Navbar.jsx";
 import LandingFooter from "../components/LandingFooter.jsx";
+import { WHITEPAPER_SITE_URL } from "../phases/constants.js";
 import "../styles/how-it-works.css";
 
 gsap.registerPlugin(ScrollTrigger);
-
-const LITEPAPER_URL = "https://moi.technology/litepaper";
 
 /* ────────────────────────────────────────────────
    Section sub-components (no special JS)
@@ -214,6 +213,8 @@ function TrustChain() {
           <p className="stat-center-desc">of autonomous agent deployments experienced unintended authority escalation in 2025</p>
           <p className="stat-center-source">— Agent of Chaos, 2025</p>
         </div>
+
+        <p className="impact-line gs">By the 4th hop, you don&apos;t exist.</p>
       </div>
     </section>
   );
@@ -296,6 +297,8 @@ function ColdStart() {
         </div>
 
         <p className="caption gs">The same questions. The same blank slate. Every single time.</p>
+
+        <p className="impact-line gs">No memory. No continuity. No you.</p>
       </div>
     </section>
   );
@@ -393,42 +396,127 @@ function Custody() {
           <p className="stat-center-desc">lost in bridge exploits alone — Ronin ($625M), Wormhole ($320M), Nomad ($190M)</p>
           <p className="stat-center-source">— DeFi exploit data, 2022–2025</p>
         </div>
+
+        <p className="impact-line gs">You own nothing. The contract owns everything.</p>
       </div>
     </section>
   );
 }
 
-function PivotSection() {
+/** Act 1 closer — dimensions, headline, bridge cards, thesis */
+function RootCauseSection() {
   return (
-    <section className="s4-pivot">
+    <section className="s-root-cause">
       <div className="sec-inner" style={{ textAlign: "center" }}>
-        <div className="pill gs">Act 2 — The Pivot</div>
+        <div className="pill gs">The Root Cause</div>
 
-        <div className="who-missing gs">
-          <p className="who-dim">WHAT — logic, programs</p>
-          <p className="who-dim">WHERE — storage, persistence</p>
-          <p className="who-dim">HOW — execution, consensus</p>
-          <p className="who-dim who-absent">WHO — <span>absent</span></p>
+        <div className="act2-dims gs">
+          <span className="act2-dim">WHAT <span className="dim-check">✓</span></span>
+          <span className="act2-dim">WHERE <span className="dim-check">✓</span></span>
+          <span className="act2-dim">HOW <span className="dim-check">✓</span></span>
+          <span className="act2-dim act2-dim-miss">
+            WHO <span className="dim-miss-badge">MISSING</span>
+          </span>
         </div>
 
-        <h2 className="pivot-headline gs">
-          <span className="pivot-l1">Three problems.</span>
-          <span className="pivot-l2">One root cause.</span>
+        <h2 className="act2-hl gs">
+          <span className="act2-hl-l1">Three problems.</span>
+          <span className="act2-hl-l2">One missing dimension.</span>
         </h2>
 
-        <div className="pivot-sub gs">
-          <p className="pivot-sub-l1">
-            There is no persistent, portable identity layer for agents.
-          </p>
-          <p className="pivot-sub-l2">
-            No <em>"you"</em> that travels with your agents.
-          </p>
+        <div className="act2-cards gs">
+          <div className="act2-card">
+            <div className="act2-card-label">Trust</div>
+            <div className="act2-card-text">
+              By the 4th agent, Alice is unknown. No <em>who</em> persists across the chain.
+            </div>
+          </div>
+          <div className="act2-card">
+            <div className="act2-card-label">Context</div>
+            <div className="act2-card-text">
+              Every agent asks the same questions. No <em>who</em> carries memory between them.
+            </div>
+          </div>
+          <div className="act2-card">
+            <div className="act2-card-label">Assets</div>
+            <div className="act2-card-text">
+              Your tokens live in someone else&apos;s mapping. No <em>who</em> actually owns them.
+            </div>
+          </div>
         </div>
 
-        <div className="existence-line gs">
-          <p>Not just identity. Not just memory.</p>
-          <p className="existence-em">Existence.</p>
+        <p className="impact-line gs s-root-cause-thesis">
+          The participant does not exist in the machine.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+/** Act 2 — MOI reveal only */
+function Act2RevealSection() {
+  const moiRef = useRef(null);
+
+  useEffect(() => {
+    const el = moiRef.current;
+    if (!el) return;
+
+    const reveal = () => {
+      el.classList.add("vis");
+    };
+
+    const tryReveal = () => {
+      if (el.classList.contains("vis")) return;
+      const r = el.getBoundingClientRect();
+      const vh = window.innerHeight;
+      if (r.bottom > 0 && r.top < vh * 0.94) reveal();
+    };
+
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          reveal();
+          obs.disconnect();
+        }
+      },
+      { threshold: 0, rootMargin: "160px 0px" }
+    );
+    obs.observe(el);
+
+    tryReveal();
+    requestAnimationFrame(() => requestAnimationFrame(tryReveal));
+    const t1 = window.setTimeout(tryReveal, 120);
+    const t2 = window.setTimeout(tryReveal, 600);
+
+    return () => {
+      obs.disconnect();
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, []);
+
+  return (
+    <section className="s-act2-reveal">
+      <div className="sec-inner" style={{ textAlign: "center" }}>
+        <div className="pill gs">Act 2 — The Answer</div>
+
+        <p className="act2-moi-q gs">Who adds the missing dimension?</p>
+
+        <div className="act2-moi-word-wrap gs">
+          <div className="act2-moi-word" ref={moiRef} aria-label="MOI">
+            MOI
+          </div>
         </div>
+
+        <p className="act2-moi-tag gs">The participant layer of the internet.</p>
+
+        <p className="act2-moi-sub gs">
+          Providing existence to participants through the Context Superstate.
+        </p>
+
+        <p className="impact-line gs">
+          Not just identity. Not just memory. Existence.
+        </p>
       </div>
     </section>
   );
@@ -482,9 +570,7 @@ function ScopedDelegation() {
           </div>
         </div>
 
-        <div className="callout-quote gs">
-          <p className="callout-text">Agents and apps log into <em>you</em>.<br />Not the other way around.</p>
-        </div>
+        <p className="impact-line gs">Agents and apps log into <em>you</em>. Not the other way around.</p>
       </div>
     </section>
   );
@@ -497,13 +583,15 @@ function Preferences() {
         <h2 className="headline gs">
           Your preferences
           <br />
-          follow you
+          follow you across networks
         </h2>
-        <p className="subline gs">Your context superstate travels with you. Every agent already knows you.</p>
+        <p className="subline gs rv d1">
+          Your context superstate travels with you. Every agent already knows you.
+        </p>
 
         <div className="pref-layout gs">
           <div className="pref-avatar">
-            <div className="pref-circle">Your<br />Superstate</div>
+            <div className="pref-circle pref-superstate-circle">Your<br />Superstate</div>
             <div className="pref-tags">
               <span className="pref-tag">Window seat</span>
               <span className="pref-tag">Vegetarian</span>
@@ -512,9 +600,7 @@ function Preferences() {
             </div>
           </div>
 
-          <div className="pref-arrow">→</div>
-
-          <div className="pref-agents">
+          <div className="pref-agents pref-cards">
             <div className="pref-agent-card">
               <h4>✈️ Travel Agent</h4>
               <div className="pref-field"><span className="check">✓</span> Window seat preference</div>
@@ -535,6 +621,10 @@ function Preferences() {
             </div>
           </div>
         </div>
+
+        <p className="impact-line gs">
+          Your context follows you. Not the other way around.
+        </p>
       </div>
     </section>
   );
@@ -590,6 +680,8 @@ function Assets() {
             <p className="assets-side-caption">All in one place. Apps never hold them.</p>
           </div>
         </div>
+
+        <p className="impact-line gs">Your assets live with <em>you</em>. Not in someone else&apos;s contract.</p>
       </div>
     </section>
   );
@@ -660,7 +752,7 @@ function Permissions() {
           </table>
         </div>
 
-        <p className="caption gs">Your privacy policy applied to them. Not theirs applied to you.</p>
+        <p className="impact-line gs">Your privacy policy applied to <em>them</em>. Not theirs applied to you.</p>
       </div>
     </section>
   );
@@ -730,10 +822,9 @@ function ContextSuperstate() {
 
         <div className="ss-formula">
           <span className="ss-formula-text gs">ψ(P, C, I) → (P, C', V)</span>
-          <p className="ss-formula-tagline gs">
-            The participant persists. The context transforms. Value is produced.
-          </p>
         </div>
+
+        <p className="impact-line gs">The participant persists. The context transforms. Value is produced.</p>
       </div>
     </section>
   );
@@ -1060,6 +1151,8 @@ function ArchitectureSection() {
             </p>
           </div>
         </div>
+
+        <p className="impact-line gs">No global queue. No shared bottleneck. Just participants.</p>
       </div>
     </section>
   );
@@ -1085,12 +1178,12 @@ function CallToAction() {
         </p>
         <div className="cta-btns gs">
           <a
-            href={LITEPAPER_URL}
+            href={WHITEPAPER_SITE_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-primary"
           >
-            Read the Litepaper →
+            Read the whitepaper →
           </a>
           <a
             href="https://docs.moi.technology"
@@ -1196,7 +1289,9 @@ export default function HowItWorksPageV5() {
         <div className="section-divider" />
         <Custody />
         <div className="section-divider" />
-        <PivotSection />
+        <RootCauseSection />
+        <div className="section-divider" />
+        <Act2RevealSection />
         <div className="section-divider" />
         <ScopedDelegation />
         <div className="section-divider" />

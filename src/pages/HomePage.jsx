@@ -1,13 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import ReactMarkdown from "react-markdown";
 import Navbar from "../components/Navbar";
 import LandingFooter from "../components/LandingFooter";
 import { useScrollReveal } from "../hooks/useScrollReveal";
 
-const LITEPAPER_URL = "/MOILitePaper.pdf";
-const API_URL = import.meta.env.VITE_CHATBOT_API || "http://localhost:3001";
-const RENDER_INTERVAL_MS = 150;
+import { WHITEPAPER_URL } from "../phases/constants.js";
+import {
+  stripMarkdown,
+  applyMarketingLastUserPrefix,
+  MARKETING_SYSTEM_OVERRIDE,
+} from "../../lib/websiteChat.js";
+
+const API_URL = "";
 
 /* ────────────────────────────────────────────────
    Participant Grid Canvas
@@ -305,10 +309,10 @@ function ParticipantCanvas({ parentRef }) {
 }
 
 /* ────────────────────────────────────────────────
-   Ask Chat — ChatGPT-style
+   Ask Chat — containerized (ChatGPT-style)
    ──────────────────────────────────────────────── */
 
-const ASK_SUGGESTIONS = [
+const ASK_PILLS = [
   { label: "Contextual Compute", q: "What is Contextual Compute?" },
   { label: "Context Superstate", q: "What is the Context Superstate?" },
   { label: "KRAMA consensus", q: "How does KRAMA achieve finality?" },
@@ -321,88 +325,180 @@ function AskChat() {
   const [loading, setLoading] = useState(false);
   const [showPills, setShowPills] = useState(true);
   const inputRef = useRef(null);
-  const accRef = useRef("");
-  const timerRef = useRef(null);
+  const msgsRef = useRef(null);
+  const historyRef = useRef([]);
 
-  const commitText = useCallback(() => {
-    const text = accRef.current;
-    if (!text) return;
-    setMessages((prev) => {
-      const last = prev[prev.length - 1];
-      if (last?.role === "assistant" && last.content !== text) {
-        return [...prev.slice(0, -1), { ...last, content: text }];
-      }
-      return prev;
-    });
+  const scrollMsgs = useCallback(() => {
+    const el = msgsRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, []);
 
   useEffect(() => {
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, []);
+    scrollMsgs();
+  }, [messages, loading, scrollMsgs]);
 
-  const sendMessage = async (text) => {
-    const t = (text || input).trim();
+  const sendMessage = async (raw) => {
+    const t = (typeof raw === "string" ? raw : input).trim();
     if (!t || loading) return;
 
-    setShowPills(false);
-    const userMsg = { role: "user", content: t };
-    setMessages((prev) => [...prev, userMsg]);
     setInput("");
+    setShowPills(false);
     setLoading(true);
-    accRef.current = "";
 
-    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
-    timerRef.current = setInterval(commitText, RENDER_INTERVAL_MS);
+    const priorHistory = historyRef.current.slice(-10);
+
+    setMessages((prev) => [...prev, { role: "user", content: t }, { role: "assistant", content: "" }]);
+
+    const apiMessages = [...priorHistory, { role: "user", content: t }].slice(-10);
+    const chatPayload =
+      import.meta.env.DEV
+        ? {
+            messages: applyMarketingLastUserPrefix(apiMessages),
+            system_override: MARKETING_SYSTEM_OVERRIDE,
+          }
+        : { messages: apiMessages };
 
     try {
-      const history = [...messages, userMsg].slice(-10);
       const res = await fetch(`${API_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: t, history }),
+        body: JSON.stringify(chatPayload),
       });
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
+      const patchAssistant = (content) => {
+        const plain = typeof content === "string" ? stripMarkdown(content) : content;
+        setMessages((prev) => {
+          const next = [...prev];
+          const last = next[next.length - 1];
+          if (last?.role === "assistant") next[next.length - 1] = { ...last, content: plain };
+          return next;
+        });
+      };
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
+      if (!res.ok) {
+        let errMsg = "Something went wrong.";
+        try {
+          const j = await res.json();
+          if (j?.error) errMsg = typeof j.error === "string" ? j.error : errMsg;
+        } catch {
           try {
-            const payload = JSON.parse(line.slice(6));
-            if (payload.type === "text") accRef.current += payload.text || "";
-          } catch { /* skip */ }
+            const txt = await res.text();
+            if (txt) errMsg = txt.slice(0, 200);
+          } catch { /* ignore */ }
         }
+        patchAssistant(errMsg);
+        historyRef.current = [...priorHistory, { role: "user", content: t }, { role: "assistant", content: errMsg }].slice(-10);
+        return;
       }
-    } catch {
-      accRef.current = "";
-      setMessages((prev) => {
-        const last = prev[prev.length - 1];
-        if (last?.role === "assistant") {
-          return [...prev.slice(0, -1), { ...last, content: "Something went wrong. Try again." }];
+
+      const ct = (res.headers.get("content-type") || "").toLowerCase();
+      const isSse =
+        ct.includes("text/event-stream") || ct.includes("event-stream");
+      let fullText = "";
+
+      if (isSse && res.body?.getReader) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.type === "text") {
+                fullText += data.text || "";
+                patchAssistant(fullText);
+              }
+            } catch { /* skip */ }
+          }
         }
-        return prev;
+      } else if (ct.includes("application/json")) {
+        try {
+          const data = await res.json();
+          fullText =
+            (typeof data.response === "string" && data.response) ||
+            (typeof data.text === "string" && data.text) ||
+            (typeof data.message === "string" && data.message) ||
+            (typeof data.content === "string" && data.content) ||
+            (typeof data.error === "string" && data.error) ||
+            "Something went wrong.";
+        } catch {
+          fullText = "Something went wrong.";
+        }
+        patchAssistant(fullText);
+      } else {
+        try {
+          fullText = (await res.text()).trim();
+          if (!fullText) fullText = "Something went wrong.";
+        } catch {
+          fullText = "Something went wrong.";
+        }
+        patchAssistant(fullText);
+      }
+
+      historyRef.current = [
+        ...priorHistory,
+        { role: "user", content: t },
+        { role: "assistant", content: stripMarkdown(fullText) },
+      ].slice(-10);
+    } catch {
+      const err = "Connection error. Try again.";
+      setMessages((prev) => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+        if (last?.role === "assistant") next[next.length - 1] = { ...last, content: err };
+        return next;
       });
+      historyRef.current = [...priorHistory, { role: "user", content: t }, { role: "assistant", content: err }].slice(-10);
     } finally {
-      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-      commitText();
       setLoading(false);
       inputRef.current?.focus();
     }
   };
 
   const handleKey = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(input);
+    }
   };
 
   return (
-    <>
+    <div className="ask-container">
+      <div className="ask-msgs" ref={msgsRef}>
+        {messages.length === 0 && (
+          <div className="ask-welcome">
+            Ask me anything about MOI — Contextual Compute, KRAMA, the Context Superstate, or the
+            litepaper.
+          </div>
+        )}
+        {messages.map((msg, i) =>
+          msg.role === "user" ? (
+            <div key={i} className="ask-msg-user">
+              {msg.content}
+            </div>
+          ) : (
+            <div key={i} className="ask-msg-bot">
+              <span className="ask-msg-psi">ψ</span>
+              {msg.content ? (
+                <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
+              ) : loading && i === messages.length - 1 ? (
+                <span className="ask-typing">
+                  <span />
+                  <span />
+                  <span />
+                </span>
+              ) : null}
+            </div>
+          )
+        )}
+      </div>
+
       <div className="ask-bar">
         <input
           ref={inputRef}
@@ -415,7 +511,7 @@ function AskChat() {
           placeholder="Ask anything about MOI..."
           autoComplete="off"
         />
-        <button className="ask-send" onClick={() => sendMessage()}>
+        <button type="button" className="ask-send" onClick={() => sendMessage(input)} aria-label="Send">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M5 12h14M12 5l7 7-7 7" />
           </svg>
@@ -424,46 +520,14 @@ function AskChat() {
 
       {showPills && (
         <div className="ask-pills">
-          {ASK_SUGGESTIONS.map((s) => (
-            <button key={s.q} className="ask-pill" onClick={() => sendMessage(s.q)}>
-              {s.label}
+          {ASK_PILLS.map((p) => (
+            <button key={p.q} type="button" className="ask-pill" onClick={() => sendMessage(p.q)}>
+              {p.label}
             </button>
           ))}
         </div>
       )}
-
-      {messages.length > 0 && (
-        <div className="ask-resp">
-          {messages.map((msg, i) =>
-            msg.role === "user" ? (
-              <div key={i} className="ask-resp-user">{msg.content}</div>
-            ) : (
-              <div key={i} className="ask-resp-bot">
-                <span className="ask-resp-psi">ψ</span>
-                {msg.content ? (
-                  loading && i === messages.length - 1 ? (
-                    <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
-                  ) : (
-                    <ReactMarkdown
-                      components={{
-                        p: ({ children }) => <p style={{ margin: "0 0 8px", lineHeight: 1.8 }}>{children}</p>,
-                        strong: ({ children }) => <strong style={{ fontWeight: 600, color: "#1A1A1A" }}>{children}</strong>,
-                        ul: ({ children }) => <ul style={{ margin: "8px 0", paddingLeft: 18 }}>{children}</ul>,
-                        li: ({ children }) => <li style={{ marginBottom: 4, lineHeight: 1.7 }}>{children}</li>,
-                      }}
-                    >
-                      {msg.content}
-                    </ReactMarkdown>
-                  )
-                ) : loading && i === messages.length - 1 ? (
-                  <span className="ask-typing"><span /><span /><span /></span>
-                ) : null}
-              </div>
-            )
-          )}
-        </div>
-      )}
-    </>
+    </div>
   );
 }
 
@@ -487,17 +551,17 @@ export default function HomePage() {
           <div ref={heroRef} className="home-hero-inner fade-slide-up">
             <p className="home-hero-tag">Powered by the Participant Layer</p>
             <h1 className="home-hero-hl">
-              The context infrastructure
+              The Context Infrastructure
               <br />
-              for the AI economy
+              for the AI Economy
             </h1>
             <p className="home-hero-sub">
               MOI gives every participant — human or agent — persistent, portable
               existence in computation.
             </p>
             <div className="home-hero-ctas">
-              <a href={LITEPAPER_URL} className="btn-primary">
-                Read the Litepaper →
+              <a href={WHITEPAPER_URL} className="btn-primary">
+                Read the whitepaper →
               </a>
               <Link to="/how-it-works" className="btn-ghost">
                 See How It Works →
@@ -510,6 +574,7 @@ export default function HomePage() {
         <section className="s-ask">
           <div ref={askRef} className="ask-center fade-slide-up">
             <h2 className="ask-hl">What can MOI help with?</h2>
+            <p className="ask-sub">Ask the protocol.</p>
             <AskChat />
           </div>
         </section>

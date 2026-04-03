@@ -1,7 +1,7 @@
 import { useRef, useEffect } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { LITEPAPER_URL } from "../phases/constants.js";
+import { WHITEPAPER_URL } from "../phases/constants.js";
 import Navbar from "../components/Navbar.jsx";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -430,13 +430,13 @@ function SectionCTA() {
           Your rules.
         </h2>
         <p className="section-subtitle font-mono text-[13px] text-[#1A1A1A]/30 mb-10 max-w-[460px] leading-relaxed">
-          Read the litepaper, explore the docs, or start building with Cocolang.
+          Read the whitepaper, explore the docs, or start building with Cocolang.
         </p>
         <a
-          href={LITEPAPER_URL}
+          href={WHITEPAPER_URL}
           className="section-visual inline-flex items-center gap-2 rounded-full bg-[#1A1A1A] text-[#F5F3EE] px-9 py-3.5 font-mono text-[11px] tracking-[0.15em] uppercase hover:bg-[#7B5EA7] transition-colors duration-300 no-underline"
         >
-          READ LITEPAPER →
+          READ WHITEPAPER →
         </a>
       </div>
     </section>
