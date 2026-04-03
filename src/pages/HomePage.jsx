@@ -313,6 +313,7 @@ function ParticipantCanvas({ parentRef }) {
    ──────────────────────────────────────────────── */
 
 const ASK_PILLS = [
+  { label: "What is MOI?", q: "What is MOI?" },
   { label: "Contextual Compute", q: "What is Contextual Compute?" },
   { label: "Context Superstate", q: "What is the Context Superstate?" },
   { label: "KRAMA consensus", q: "How does KRAMA achieve finality?" },
@@ -323,7 +324,6 @@ function AskChat() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showPills, setShowPills] = useState(true);
   const inputRef = useRef(null);
   const msgsRef = useRef(null);
   const historyRef = useRef([]);
@@ -342,7 +342,6 @@ function AskChat() {
     if (!t || loading) return;
 
     setInput("");
-    setShowPills(false);
     setLoading(true);
 
     const priorHistory = historyRef.current.slice(-10);
@@ -518,15 +517,13 @@ function AskChat() {
         </button>
       </div>
 
-      {showPills && (
-        <div className="ask-pills">
-          {ASK_PILLS.map((p) => (
-            <button key={p.q} type="button" className="ask-pill" onClick={() => sendMessage(p.q)}>
-              {p.label}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="ask-pills">
+        {ASK_PILLS.map((p) => (
+          <button key={p.q} type="button" className="ask-pill" onClick={() => sendMessage(p.q)}>
+            {p.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
