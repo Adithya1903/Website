@@ -34,7 +34,7 @@ export function drawFunnel(sctx, state, timeline, { cx, cy, W, spawnTx }) {
     sctx.fillText(PARTICIPANTS[i].name, originX - 14, oy + 3);
   }
 
-  sctx.strokeStyle = "rgba(192,57,43,0.2)";
+  sctx.strokeStyle = "rgba(26, 26, 26, 0.08)";
   sctx.lineWidth = 2;
   sctx.beginPath();
   sctx.moveTo(funnelLeft, bottleneckY - funnelSpreadY);
@@ -145,19 +145,19 @@ export function drawFunnel(sctx, state, timeline, { cx, cy, W, spawnTx }) {
 
   if (state.time % 60 === 0) state.txPool = state.txPool.filter((t) => t.alive);
 
-  const counterPulse = Math.sin(state.time * 0.05) * 0.15 + 0.85;
-  sctx.fillStyle = `rgba(192,57,43,${0.55 * counterPulse})`;
-  sctx.font = '12px "DM Mono", monospace';
-  sctx.textAlign = "center";
-  sctx.fillText(`${waitCount} transactions waiting...`, bottleneckX - 10, bottleneckY + neckW + 40);
-  const congestion = Math.min(waitCount / 15, 1);
-  if (congestion > 0.3) {
-    sctx.fillStyle = `rgba(192,57,43,${congestion * 0.2})`;
-    sctx.font = '10px "DM Mono", monospace';
-    sctx.fillText(congestion > 0.7 ? "⚠ HIGH CONTENTION" : "⚠ contention building", bottleneckX - 10, bottleneckY + neckW + 58);
+  if (waitCount > 3) {
+    const counterPulse = Math.sin(state.time * 0.05) * 0.15 + 0.85;
+    sctx.fillStyle = `rgba(196, 77, 90, ${0.55 * counterPulse})`;
+    sctx.font = '400 9px "DM Mono", monospace';
+    sctx.textAlign = "center";
+    sctx.textBaseline = "alphabetic";
+    sctx.fillText(`${waitCount} txns waiting...`, bottleneckX, bottleneckY + neckW + 36);
+    sctx.fillStyle = "rgba(196, 77, 90, 0.3)";
+    sctx.font = '500 7px "DM Mono", monospace';
+    sctx.fillText("⚠ HIGH CONTENTION", bottleneckX, bottleneckY + neckW + 48);
   }
-  sctx.fillStyle = "rgba(26,26,26,0.2)";
-  sctx.font = '9px "DM Mono", monospace';
-  sctx.fillText("one block at a time →", blockX + blockW / 2, cy + blockH / 2 + 24);
+  sctx.fillStyle = "rgba(26, 26, 26, 0.15)";
+  sctx.font = '300 8px "DM Mono", monospace';
+  sctx.fillText("one block at a time →", blockX + blockW / 2, cy + blockH / 2 + 16);
   sctx.restore();
 }

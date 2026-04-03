@@ -934,7 +934,7 @@ function ArchitectureSection() {
         ctx.beginPath();
         ctx.moveTo(pLeft + 38, py);
         ctx.quadraticCurveTo(W * 0.35, py, neckX, neckY + (i - 2) * 3);
-        ctx.strokeStyle = "rgba(196,77,90,0.08)";
+        ctx.strokeStyle = "rgba(26, 26, 26, 0.08)";
         ctx.lineWidth = 1;
         ctx.stroke();
       });
@@ -1016,17 +1016,17 @@ function ArchitectureSection() {
 
       if (bottleneckCount > 3) {
         ctx.font = '400 9px "DM Mono", monospace';
-        ctx.fillStyle = "rgba(196,77,90,0.45)";
+        ctx.fillStyle = "rgba(196, 77, 90, 0.45)";
         ctx.textAlign = "center";
         ctx.textBaseline = "alphabetic";
-        ctx.fillText(bottleneckCount + " txns waiting...", neckX - 10, neckY + 36);
+        ctx.fillText(bottleneckCount + " txns waiting...", neckX, neckY + 36);
         ctx.font = '500 7px "DM Mono", monospace';
-        ctx.fillStyle = "rgba(196,77,90,0.3)";
-        ctx.fillText("⚠ HIGH CONTENTION", neckX - 10, neckY + 48);
+        ctx.fillStyle = "rgba(196, 77, 90, 0.3)";
+        ctx.fillText("⚠ HIGH CONTENTION", neckX, neckY + 48);
       }
 
       ctx.font = '300 8px "DM Mono", monospace';
-      ctx.fillStyle = "rgba(26,26,26,0.15)";
+      ctx.fillStyle = "rgba(26, 26, 26, 0.15)";
       ctx.textAlign = "center";
       ctx.textBaseline = "alphabetic";
       ctx.fillText("one block at a time →", blockX + blockW / 2, neckY + blockH / 2 + 16);
@@ -1147,7 +1147,6 @@ function ArchitectureSection() {
             <div className="arch-canvas-wrap">
               <canvas ref={funnelRef} />
             </div>
-            <p className="arch-side-caption">One block at a time →</p>
           </div>
 
           <div className="arch-divider" />
